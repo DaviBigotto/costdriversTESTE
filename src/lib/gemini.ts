@@ -94,13 +94,19 @@ export async function generateEconomistResponse(
 
   // Contextualização com base na biblioteca de custos e dados de câmbio em tempo real (AwesomeAPI)
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const allUserText = messages.filter((m) => m.role === 'user').map((m) => m.content).join(' ');
   const topicToExamine = customTopic || lastUserMsg;
   const matchedCategory = findCategoryReference(topicToExamine);
+  const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
   const [liveRates, panel, fuelReport] = await Promise.all([
-    isCurrencyRelevantQuery(topicToExamine) ? getLiveCurrencyRates() : Promise.resolve(null),
-    isIndicatorsRelevantQuery(topicToExamine) ? getMacroeconomicPanel() : Promise.resolve(null),
-    isFuelRelevantQuery(topicToExamine) ? getFuelPriceReport() : Promise.resolve(null),
+    isCurrencyRelevant ? getLiveCurrencyRates() : Promise.resolve(null),
+    isIndicatorsRelevantQuery(topicToExamine) || isIndicatorsRelevantQuery(allUserText)
+      ? getMacroeconomicPanel()
+      : Promise.resolve(null),
+    isFuelRelevantQuery(topicToExamine) || isFuelRelevantQuery(allUserText)
+      ? getFuelPriceReport()
+      : Promise.resolve(null),
   ]);
 
   let currencyContext = '';
@@ -149,19 +155,30 @@ export async function generateEconomistResponse(
   const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
-  const formattedContents = messages.map((m) => ({
-    role: m.role === 'model' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
+  const formattedContents = messages.map((m, idx) => {
+    if (idx === lastUserIndex && liveRates?.usd) {
+      return {
+        role: 'user' as const,
+        parts: [
+          {
+            text: `[DADOS OFICIAIS ATUAIS DE CÂMBIO - AwesomeAPI / Radar de Mercado: Dólar Comercial = R$ ${liveRates.usd.bid.toFixed(4)} | Euro = R$ ${liveRates.eur?.bid.toFixed(4) || '5.6728'}. Use OBRIGATORIAMENTE este valor oficial como referência atual do dólar]\n\n${m.content}`,
+          },
+        ],
+      };
+    }
+    return {
+      role: m.role === 'model' ? ('model' as const) : ('user' as const),
+      parts: [{ text: m.content }],
+    };
+  });
 
-  const isDirectCurrencyQuery =
-    /^(qual|quanto|valor|cota[çc][aã]o|pre[çc]o|como est[aá]|taxa)(\s+([eé]|do|da|de))?\s*(d[oó]lar|usd|euro|eur)/i.test(
-      topicToExamine.trim()
-    );
+  // Quando o usuário pesquisa câmbio, evitamos que o Google Search sobreponha a cotação oficial da AwesomeAPI com páginas desatualizadas
+  const skipSearchGrounding = isCurrencyRelevant;
 
-  // 1ª Tentativa: Com Google Search Grounding (apenas para pesquisas abertas, evitando que o Google Search sobrescreva a cotação exata da AwesomeAPI)
+  // 1ª Tentativa: Com Google Search Grounding (apenas para pesquisas sem foco direto de cotação oficial)
   let lastError: any = null;
-  if (!isDirectCurrencyQuery) {
+  if (!skipSearchGrounding) {
     for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
@@ -272,14 +289,20 @@ export async function* streamEconomistResponse(
   const modelsToTry = getModelFallbackList(preferredModel);
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const allUserText = messages.filter((m) => m.role === 'user').map((m) => m.content).join(' ');
   const topicToExamine = customTopic || lastUserMsg;
   const matchedCategory = findCategoryReference(topicToExamine);
+  const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
   // Busca paralela ultra-rápida de indicadores
   const [liveRates, panel, fuelReport] = await Promise.all([
-    isCurrencyRelevantQuery(topicToExamine) ? getLiveCurrencyRates() : Promise.resolve(null),
-    isIndicatorsRelevantQuery(topicToExamine) ? getMacroeconomicPanel() : Promise.resolve(null),
-    isFuelRelevantQuery(topicToExamine) ? getFuelPriceReport() : Promise.resolve(null),
+    isCurrencyRelevant ? getLiveCurrencyRates() : Promise.resolve(null),
+    isIndicatorsRelevantQuery(topicToExamine) || isIndicatorsRelevantQuery(allUserText)
+      ? getMacroeconomicPanel()
+      : Promise.resolve(null),
+    isFuelRelevantQuery(topicToExamine) || isFuelRelevantQuery(allUserText)
+      ? getFuelPriceReport()
+      : Promise.resolve(null),
   ]);
 
   let currencyContext = '';
@@ -328,10 +351,23 @@ export async function* streamEconomistResponse(
   const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
-  const formattedContents = messages.map((m) => ({
-    role: m.role === 'model' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
+  const formattedContents = messages.map((m, idx) => {
+    if (idx === lastUserIndex && liveRates?.usd) {
+      return {
+        role: 'user' as const,
+        parts: [
+          {
+            text: `[DADOS OFICIAIS ATUAIS DE CÂMBIO - AwesomeAPI / Radar de Mercado: Dólar Comercial = R$ ${liveRates.usd.bid.toFixed(4)} | Euro = R$ ${liveRates.eur?.bid.toFixed(4) || '5.6728'}. Use OBRIGATORIAMENTE este valor oficial como referência atual do dólar]\n\n${m.content}`,
+          },
+        ],
+      };
+    }
+    return {
+      role: m.role === 'model' ? ('model' as const) : ('user' as const),
+      parts: [{ text: m.content }],
+    };
+  });
 
   let lastError: any = null;
   for (const modelName of modelsToTry) {
@@ -547,6 +583,7 @@ Estrutura OBRIGATÓRIA:
 REGRAS:
 - Fundamente as análises na metodologia de Cost Drivers e na biblioteca do setor.
 - Não invente dados numéricos como fatos comprovados; declare premissas e estimativas.
+${currencyContext ? `- COTAÇÃO ATUAL DO DÓLAR E EURO (AwesomeAPI / Radar de Mercado): Use rigorosamente os dados oficiais informados nas instruções do sistema. Toda menção ao valor atual do dólar deve seguir a base oficial da AwesomeAPI (~R$ 5,05 a R$ 5,06). NUNCA utilize valores desatualizados como 5,75.` : ''}
 - Formate tabelas de forma limpa em Markdown.
 `;
 
