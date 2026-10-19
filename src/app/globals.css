@@ -893,6 +893,186 @@ tbody tr:hover td {
 }
 
 /* =========================================================================
+   Slash Command Autocomplete Menu (Menu de Comandos '/')
+   ========================================================================= */
+.slash-menu-container {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border: 1.5px solid #D8E2EA;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 20, 125, 0.1), 0 4px 14px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  z-index: 50;
+  animation: slideUpFade 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.slash-menu-header {
+  padding: 8px 14px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.slash-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--navy);
+}
+
+.slash-menu-hint {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.slash-menu-list {
+  max-height: 290px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  border: 1px solid transparent;
+}
+
+.slash-menu-item:hover {
+  background: #F1F5F9;
+}
+
+.slash-menu-item.selected {
+  background: rgba(0, 20, 125, 0.05);
+  border-color: rgba(0, 20, 125, 0.15);
+}
+
+.slash-menu-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.slash-menu-item.selected .slash-menu-item-icon {
+  border-color: rgba(0, 20, 125, 0.3);
+  background: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 20, 125, 0.1);
+}
+
+.slash-menu-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slash-menu-item-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.slash-menu-cmd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.slash-menu-syntax {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  color: #64748B;
+}
+
+.slash-menu-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.slash-menu-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 20, 125, 0.08);
+  color: var(--navy);
+  border: 1px solid rgba(0, 20, 125, 0.15);
+  letter-spacing: 0.02em;
+}
+
+.slash-menu-desc {
+  font-size: 11.5px;
+  color: #64748B;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slash-menu-action-hint {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.slash-menu-item.selected .slash-menu-action-hint,
+.slash-menu-item:hover .slash-menu-action-hint {
+  opacity: 1;
+}
+
+.slash-menu-enter-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--navy);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 20, 125, 0.2);
+  padding: 3px 6px;
+  border-radius: 5px;
+  box-shadow: 0 1px 2px rgba(0, 20, 125, 0.05);
+}
+
+/* =========================================================================
    Simulador de Should-Cost - Modal Plurix Design System
    ========================================================================= */
 .calc-overlay {

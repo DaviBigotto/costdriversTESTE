@@ -31,6 +31,11 @@ import {
   Activity,
 } from 'lucide-react';
 import { generateBulletinPdf } from '@/lib/pdfGenerator';
+import {
+  SlashCommandMenu,
+  SLASH_COMMANDS,
+  SlashCommandItem,
+} from '@/components/SlashCommandMenu';
 
 interface Message {
   id: string;
@@ -64,8 +69,25 @@ export default function EconomistaDeComprasPage() {
   const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
   const [isRadarOpen, setIsRadarOpen] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState<number>(0);
+  const [isCommandMenuDismissed, setIsCommandMenuDismissed] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Autocomplete de comandos com '/'
+  const isSlashCommandActive =
+    inputMessage.startsWith('/') && !inputMessage.includes(' ') && !isCommandMenuDismissed;
+  const slashQuery = inputMessage.slice(1).trim().toLowerCase();
+  const filteredCommands = SLASH_COMMANDS.filter(
+    (cmd) =>
+      cmd.command.slice(1).includes(slashQuery) ||
+      cmd.label.toLowerCase().includes(slashQuery) ||
+      cmd.description.toLowerCase().includes(slashQuery)
+  );
+
+  useEffect(() => {
+    setSelectedCommandIndex(0);
+  }, [slashQuery]);
 
   // Carrega histórico local
   useEffect(() => {
@@ -115,13 +137,40 @@ export default function EconomistaDeComprasPage() {
     }, 100);
   };
 
-  // Ajusta altura do textarea dinamicamente
+  // Ajusta altura do textarea dinamicamente e gerencia exibição do menu de comandos
   const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputMessage(e.target.value);
+    const val = e.target.value;
+    setInputMessage(val);
+    if (isCommandMenuDismissed && val.startsWith('/')) {
+      setIsCommandMenuDismissed(false);
+    }
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
     }
+  };
+
+  const handleSelectCommand = (cmd: SlashCommandItem) => {
+    setIsCommandMenuDismissed(true);
+    if (cmd.template === 'open_calculator') {
+      setInputMessage('');
+      setIsCalculatorOpen(true);
+      return;
+    }
+    if (cmd.command === '/indices') {
+      setInputMessage('');
+      handleSendMessage('/indices');
+      return;
+    }
+
+    setInputMessage(cmd.template);
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.selectionStart = textareaRef.current.value.length;
+        textareaRef.current.selectionEnd = textareaRef.current.value.length;
+      }
+    }, 50);
   };
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
@@ -408,6 +457,30 @@ ${activeConversation.messages
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Navegação no menu de comandos / com teclado
+    if (isSlashCommandActive && filteredCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedCommandIndex((prev) => (prev + 1) % filteredCommands.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedCommandIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        handleSelectCommand(filteredCommands[selectedCommandIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsCommandMenuDismissed(true);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -741,6 +814,15 @@ ${activeConversation.messages
         {/* Cápsula de Entrada Flutuante (Estilo ChatGPT / Claude / Gemini) */}
         <div className="dock-container">
           <div className="dock-content">
+            {/* Menu Popover de Autocomplete de Comandos '/' */}
+            <SlashCommandMenu
+              isOpen={isSlashCommandActive}
+              commands={filteredCommands}
+              selectedIndex={selectedCommandIndex}
+              onSelectCommand={handleSelectCommand}
+              searchQuery={slashQuery}
+            />
+
             {/* Input Capsule */}
             <div className={`input-capsule ${inputMessage.trim() ? 'has-content' : ''}`}>
               <textarea
