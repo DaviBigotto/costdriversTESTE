@@ -152,35 +152,42 @@ export async function generateEconomistResponse(
     parts: [{ text: m.content }],
   }));
 
-  // 1ª Tentativa: Com Google Search Grounding
-  let lastError: any = null;
-  for (const modelName of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: formattedContents,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.2,
-          tools: [{ googleSearch: {} }],
-        },
-      });
+  const isDirectCurrencyQuery =
+    /^(qual|quanto|valor|cota[çc][aã]o|pre[çc]o|como est[aá]|taxa)(\s+([eé]|do|da|de))?\s*(d[oó]lar|usd|euro|eur)/i.test(
+      topicToExamine.trim()
+    );
 
-      return processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
-    } catch (err: any) {
-      lastError = err;
-      // Se for erro de quota do Google Search Grounding (429) ou recusa de tools, interrompe e vai para o fallback sem tools
-      if (err?.status === 429 || err?.message?.includes('RESOURCE_EXHAUSTED') || err?.message?.includes('quota')) {
-        break;
-      }
-      // Se for 503 ou 404, tenta o próximo modelo da lista
-      if (err?.status === 503 || err?.status === 404) {
-        continue;
+  // 1ª Tentativa: Com Google Search Grounding (apenas para pesquisas abertas, evitando que o Google Search sobrescreva a cotação exata da AwesomeAPI)
+  let lastError: any = null;
+  if (!isDirectCurrencyQuery) {
+    for (const modelName of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: formattedContents,
+          config: {
+            systemInstruction: systemInstruction,
+            temperature: 0.2,
+            tools: [{ googleSearch: {} }],
+          },
+        });
+
+        return processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
+      } catch (err: any) {
+        lastError = err;
+        // Se for erro de quota do Google Search Grounding (429) ou recusa de tools, interrompe e vai para o fallback sem tools
+        if (err?.status === 429 || err?.message?.includes('RESOURCE_EXHAUSTED') || err?.message?.includes('quota')) {
+          break;
+        }
+        // Se for 503 ou 404, tenta o próximo modelo da lista
+        if (err?.status === 503 || err?.status === 404) {
+          continue;
+        }
       }
     }
   }
 
-  // 2ª Tentativa (Fallback Gracioso): Chamada direta ao modelo sem a tool de search (caso o Grounding esteja sem cota)
+  // 2ª Tentativa (Fallback Gracioso): Chamada direta ao modelo sem a tool de search (caso o Grounding esteja sem cota ou seja consulta direta de cotação)
   for (const modelName of modelsToTry) {
     try {
       const response = await ai.models.generateContent({

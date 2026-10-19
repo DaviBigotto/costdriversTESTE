@@ -135,7 +135,7 @@ export function formatCurrencyContextForPrompt(currencyData: LiveCurrencyData | 
   }
 
   parts.push(
-    'REGRA OBRIGATÓRIA: Utilize EXATAMENTE estes valores reais de cotação para qualquer análise que envolva o Dólar, câmbio, importações ou drivers internacionais. Cite a cotação oficial e mencione a AwesomeAPI / Mercado Financeiro como fonte com a data/hora indicada.'
+    'REGRA OBRIGATÓRIA E ABSOLUTA: O usuário está perguntando sobre moedas/câmbio. Você DEVE responder IMEDIATAMENTE com os valores exatos de cotação da AwesomeAPI informados acima (ex: Dólar R$ X,XXXX). É TERMINANTEMENTE PROIBIDO dizer que o dado não foi localizado ou que você não tem terminal ao vivo, pois você JÁ TEM esta cotação oficial em tempo real da AwesomeAPI conectada agora.'
   );
 
   return parts.join('\n');
