@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   Briefcase,
   Sliders,
-  CornerDownLeft,
 } from 'lucide-react';
 
 export interface SlashCommandItem {
@@ -26,9 +25,9 @@ export interface SlashCommandItem {
 export const SLASH_COMMANDS: SlashCommandItem[] = [
   {
     command: '/reajuste',
-    syntax: '/reajuste [item] [% pedido]',
+    syntax: '[item] [%]',
     label: 'Auditar Reajuste (Should-Cost)',
-    description: 'Calcula a variação teórica em p.p. com fórmula paramétrica e confronta a solicitação do fornecedor',
+    description: 'Calcula variação teórica em p.p. e confronta a proposta do fornecedor',
     template: '/reajuste ',
     category: 'Cálculo',
     badge: 'Should-Cost',
@@ -36,59 +35,58 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
   },
   {
     command: '/analise',
-    syntax: '/analise [item ou categoria]',
+    syntax: '[item]',
     label: 'Análise de Cost Drivers',
-    description: 'Disseca a estrutura de custos, matérias-primas, mão de obra e sensibilidade cambial do insumo',
+    description: 'Disseca matérias-primas, mão de obra e dependência cambial',
     template: '/analise ',
     category: 'Análise',
     iconName: 'TrendingUp',
   },
   {
     command: '/boletim',
-    syntax: '/boletim [tema]',
-    label: 'Gerar Boletim de Mercado (PDF)',
-    description: 'Elabora estudo econômico em 9 seções executivas e disponibiliza o PDF oficial timbrado para download',
+    syntax: '[tema]',
+    label: 'Boletim de Mercado (PDF)',
+    description: 'Gera estudo em 9 seções executivas e prepara PDF timbrado',
     template: '/boletim ',
     category: 'Mercado',
-    badge: 'PDF Oficial',
+    badge: 'PDF',
     iconName: 'FileText',
   },
   {
     command: '/indices',
-    syntax: '/indices',
-    label: 'Painel Macroeconômico Oficial',
-    description: 'Consulta cotações e taxas oficiais ao vivo (Dólar, Euro, IPCA, INPC, Selic e Diesel ANP)',
+    syntax: '',
+    label: 'Painel Macroeconômico',
+    description: 'Cotações em tempo real: Dólar, Euro, IPCA, Selic e Diesel ANP',
     template: '/indices',
     category: 'Mercado',
-    badge: 'Tempo Real',
+    badge: 'Ao vivo',
     iconName: 'Activity',
   },
   {
     command: '/estrategia',
-    syntax: '/estrategia [item]',
-    label: 'Estratégia & Argumentos de Negociação',
-    description: 'Prepara perguntas para fornecedor, BATNA e proposta de fórmula paramétrica de reajuste',
+    syntax: '[item]',
+    label: 'Roteiro de Negociação',
+    description: 'Perguntas-chave, BATNA e proposta de fórmula paramétrica',
     template: '/estrategia ',
     category: 'Análise',
     iconName: 'Briefcase',
   },
   {
     command: '/riscos',
-    syntax: '/riscos [item]',
-    label: 'Matriz de Riscos da Categoria',
-    description: 'Mapeia pressões de curto prazo, escassez de oferta, tarifas e volatilidade de matérias-primas',
+    syntax: '[item]',
+    label: 'Matriz de Riscos',
+    description: 'Mapeia gargalos, volatilidade e pressões inflacionárias',
     template: '/riscos ',
     category: 'Análise',
     iconName: 'ShieldAlert',
   },
   {
     command: '/shouldcost',
-    syntax: '/shouldcost',
-    label: 'Abrir Calculadora Should-Cost',
-    description: 'Abre a calculadora visual interativa com biblioteca setorial da Plurix e simulação de pesos',
+    syntax: '',
+    label: 'Calculadora Should-Cost',
+    description: 'Abre a calculadora visual com pesos e drivers interativos',
     template: 'open_calculator',
     category: 'Cálculo',
-    badge: 'Interativo',
     iconName: 'Sliders',
   },
 ];
@@ -113,21 +111,21 @@ export function SlashCommandMenu({
   const renderIcon = (iconName: string) => {
     switch (iconName) {
       case 'Calculator':
-        return <Calculator size={15} color="var(--navy)" />;
+        return <Calculator size={13} color="var(--navy)" />;
       case 'TrendingUp':
-        return <TrendingUp size={15} color="var(--navy)" />;
+        return <TrendingUp size={13} color="var(--navy)" />;
       case 'FileText':
-        return <FileText size={15} color="var(--navy)" />;
+        return <FileText size={13} color="var(--navy)" />;
       case 'Activity':
-        return <Activity size={15} color="var(--pos-d)" />;
+        return <Activity size={13} color="var(--pos-d)" />;
       case 'Briefcase':
-        return <Briefcase size={15} color="var(--navy)" />;
+        return <Briefcase size={13} color="var(--navy)" />;
       case 'ShieldAlert':
-        return <ShieldAlert size={15} color="#DC2626" />;
+        return <ShieldAlert size={13} color="#DC2626" />;
       case 'Sliders':
-        return <Sliders size={15} color="var(--navy)" />;
+        return <Sliders size={13} color="var(--navy)" />;
       default:
-        return <Calculator size={15} color="var(--navy)" />;
+        return <Calculator size={13} color="var(--navy)" />;
     }
   };
 
@@ -135,9 +133,9 @@ export function SlashCommandMenu({
     <div className="slash-menu-container" role="listbox" aria-label="Comandos rápidos">
       <div className="slash-menu-header">
         <span className="slash-menu-title">
-          Comandos Rápidos do Economista {searchQuery ? `· Filtrando por "${searchQuery}"` : ''}
+          Comandos {searchQuery ? `· "${searchQuery}"` : ''}
         </span>
-        <span className="slash-menu-hint">Use ↑ ↓ para navegar · Enter ou Tab para selecionar</span>
+        <span className="slash-menu-hint">↑ ↓ navegar · ↵ selecionar</span>
       </div>
 
       <div className="slash-menu-list">
@@ -159,18 +157,13 @@ export function SlashCommandMenu({
               <div className="slash-menu-item-content">
                 <div className="slash-menu-item-top">
                   <span className="slash-menu-cmd">{cmd.command}</span>
-                  <span className="slash-menu-syntax">{cmd.syntax.replace(cmd.command, '')}</span>
-                  <span className="slash-menu-label">— {cmd.label}</span>
-                  {cmd.badge && <span className="slash-menu-badge">{cmd.badge}</span>}
+                  {cmd.syntax && <span className="slash-menu-syntax">{cmd.syntax}</span>}
+                  <span className="slash-menu-label">{cmd.label}</span>
                 </div>
                 <div className="slash-menu-desc">{cmd.description}</div>
               </div>
 
-              <div className="slash-menu-action-hint">
-                <span className="slash-menu-enter-badge">
-                  <CornerDownLeft size={10} /> Enter
-                </span>
-              </div>
+              {cmd.badge && <span className="slash-menu-badge">{cmd.badge}</span>}
             </div>
           );
         })}
