@@ -898,28 +898,29 @@ tbody tr:hover td {
 .slash-menu-container {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
   background: #FFFFFF;
   border: 1px solid rgba(0, 20, 125, 0.12);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 20, 125, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 12px 36px rgba(0, 20, 125, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   z-index: 50;
-  animation: slideUpFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideUpFadeCenter 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
 }
 
-@keyframes slideUpFade {
+@keyframes slideUpFadeCenter {
   from {
     opacity: 0;
-    transform: translateY(4px) scale(0.99);
+    transform: translate(-50%, 6px) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
   }
 }
 
