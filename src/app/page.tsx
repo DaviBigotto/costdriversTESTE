@@ -179,13 +179,22 @@ export default function EconomistaDeComprasPage() {
     const isFirstMessage = currentMessages.length === 1;
     const conversationTitle = isFirstMessage ? text.trim().slice(0, 28) : (activeConversation?.title || 'Consulta');
 
+    const modelMsgId = `msg_${Date.now() + 1}`;
+    const initialModelMsg: Message = {
+      id: modelMsgId,
+      role: 'model',
+      content: '',
+      sources: [],
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    };
+
     setConversations((prev) =>
       prev.map((c) =>
         c.id === activeConversationId
           ? {
               ...c,
               title: conversationTitle,
-              messages: currentMessages,
+              messages: [...currentMessages, initialModelMsg],
               updatedAt: new Date().toISOString(),
             }
           : c
@@ -201,46 +210,84 @@ export default function EconomistaDeComprasPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: currentMessages.map((m) => ({ role: m.role, content: m.content })),
+          stream: true,
         }),
       });
 
-      const data = await response.json();
+      if (!response.ok || !response.body) {
+        throw new Error('Falha na resposta do servidor');
+      }
 
-      const modelMsg: Message = {
-        id: `msg_${Date.now() + 1}`,
-        role: 'model',
-        content: data.text || 'Nenhuma resposta recebida do modelo.',
-        sources: data.sources || [],
-        suggestedAction: data.suggestedAction,
-        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamedText = '';
+      let buffer = '';
 
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === activeConversationId
-            ? {
-                ...c,
-                messages: [...currentMessages, modelMsg],
-                updatedAt: new Date().toISOString(),
-              }
-            : c
-        )
-      );
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop() || '';
+
+        for (const evt of events) {
+          const trimmed = evt.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            if (data.type === 'token') {
+              streamedText += data.content;
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === activeConversationId
+                    ? {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === modelMsgId ? { ...m, content: streamedText } : m
+                        ),
+                      }
+                    : c
+                )
+              );
+              scrollToBottom();
+            } else if (data.type === 'done') {
+              setConversations((prev) =>
+                prev.map((c) =>
+                  c.id === activeConversationId
+                    ? {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === modelMsgId
+                            ? {
+                                ...m,
+                                content: data.text || streamedText,
+                                sources: data.sources || [],
+                                suggestedAction: data.suggestedAction,
+                              }
+                            : m
+                        ),
+                      }
+                    : c
+                )
+              );
+            }
+          } catch (e) {
+            console.error('Erro ao decodificar evento SSE:', e);
+          }
+        }
+      }
     } catch (error) {
       console.error('Falha ao obter resposta da API:', error);
-      const errorMsg: Message = {
-        id: `msg_${Date.now() + 1}`,
-        role: 'model',
-        content: '> ⚠️ **Erro de Conexão:** Não foi possível contactar o servidor local do Economista de Compras.',
-        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-      };
+      const errorMsgText = '> ⚠️ **Erro de Conexão:** Não foi possível contactar o servidor local do Economista de Compras.';
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeConversationId
             ? {
                 ...c,
-                messages: [...currentMessages, errorMsg],
-                updatedAt: new Date().toISOString(),
+                messages: c.messages.map((m) =>
+                  m.id === modelMsgId ? { ...m, content: errorMsgText } : m
+                ),
               }
             : c
         )
@@ -582,7 +629,16 @@ ${activeConversation.messages
                     </div>
 
                     <div className="model-content-markdown">
-                      <MarkdownRenderer content={msg.content} />
+                      {msg.content ? (
+                        <MarkdownRenderer content={msg.content} />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '13px', padding: '4px 0' }}>
+                          <span>Analisando cost drivers e dados de mercado</span>
+                          <span className="typing-dot"></span>
+                          <span className="typing-dot"></span>
+                          <span className="typing-dot"></span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Fontes Oficiais Retornadas pelo Grounding */}
@@ -608,7 +664,8 @@ ${activeConversation.messages
                     )}
 
                     {/* Barra de Ações Sutil no Rodapé da Mensagem */}
-                    <div className="response-footer-toolbar">
+                    {msg.content && (
+                      <div className="response-footer-toolbar">
                       <button
                         type="button"
                         className="toolbar-action-btn"
@@ -656,14 +713,15 @@ ${activeConversation.messages
                         </button>
                       )}
                     </div>
-                  </div>
-                )
+                  )}
+                </div>
               )
-            )}
+            )
+          )}
 
-            {/* Indicador de Carregamento Estilo Claude */}
-            {isLoading && (
-              <div className="typing-indicator">
+          {/* Indicador de Carregamento Estilo Claude */}
+          {isLoading && !activeConversation?.messages.some((m) => m.role === 'model' && !m.content) && (
+            <div className="typing-indicator">
                 <div className="model-avatar">
                   <Sparkles size={12} />
                 </div>

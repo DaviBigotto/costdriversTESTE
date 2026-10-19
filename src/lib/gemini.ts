@@ -97,22 +97,25 @@ export async function generateEconomistResponse(
   const topicToExamine = customTopic || lastUserMsg;
   const matchedCategory = findCategoryReference(topicToExamine);
 
+  const [liveRates, panel, fuelReport] = await Promise.all([
+    isCurrencyRelevantQuery(topicToExamine) ? getLiveCurrencyRates() : Promise.resolve(null),
+    isIndicatorsRelevantQuery(topicToExamine) ? getMacroeconomicPanel() : Promise.resolve(null),
+    isFuelRelevantQuery(topicToExamine) ? getFuelPriceReport() : Promise.resolve(null),
+  ]);
+
   let currencyContext = '';
   const additionalSources: GroundingSource[] = [];
-  if (isCurrencyRelevantQuery(topicToExamine)) {
-    const liveRates = await getLiveCurrencyRates();
-    if (liveRates?.usd) {
-      currencyContext = formatCurrencyContextForPrompt(liveRates);
-      additionalSources.push({
-        title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
-        url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
-      });
-    }
+
+  if (liveRates?.usd) {
+    currencyContext = formatCurrencyContextForPrompt(liveRates);
+    additionalSources.push({
+      title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
+      url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
+    });
   }
 
   let indicatorsContext = '';
-  if (isIndicatorsRelevantQuery(topicToExamine)) {
-    const panel = await getMacroeconomicPanel();
+  if (panel) {
     indicatorsContext = formatIndicatorsContextForPrompt(panel);
     if (panel.ipca) {
       additionalSources.push({
@@ -135,8 +138,7 @@ export async function generateEconomistResponse(
   }
 
   let fuelContext = '';
-  if (isFuelRelevantQuery(topicToExamine)) {
-    const fuelReport = await getFuelPriceReport();
+  if (fuelReport) {
     fuelContext = formatFuelContextForPrompt(fuelReport);
     additionalSources.push({
       title: `ANP — Levantamento de Preços de Combustíveis (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
@@ -245,6 +247,153 @@ export async function generateEconomistResponse(
     sources: [],
     searchQueries: [],
   };
+}
+
+/**
+ * Executa a geração com Streaming token-a-token para experiência instantânea do usuário.
+ */
+export async function* streamEconomistResponse(
+  messages: ChatMessage[],
+  customTopic?: string
+): AsyncGenerator<
+  | { type: 'token'; content: string }
+  | { type: 'done'; text: string; sources: GroundingSource[]; suggestedAction?: any }
+> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    const errorText = `> ⚠️ **Atenção: Chave de API não configurada.**\n\nConfigure a variável \`GEMINI_API_KEY\` no arquivo \`.env\` ou na Vercel para ativar as respostas de IA em tempo real.`;
+    yield { type: 'token', content: errorText };
+    yield { type: 'done', text: errorText, sources: [], suggestedAction: undefined };
+    return;
+  }
+
+  const ai = getGeminiClient();
+  const preferredModel = getGeminiModel();
+  const modelsToTry = getModelFallbackList(preferredModel);
+
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const topicToExamine = customTopic || lastUserMsg;
+  const matchedCategory = findCategoryReference(topicToExamine);
+
+  // Busca paralela ultra-rápida de indicadores
+  const [liveRates, panel, fuelReport] = await Promise.all([
+    isCurrencyRelevantQuery(topicToExamine) ? getLiveCurrencyRates() : Promise.resolve(null),
+    isIndicatorsRelevantQuery(topicToExamine) ? getMacroeconomicPanel() : Promise.resolve(null),
+    isFuelRelevantQuery(topicToExamine) ? getFuelPriceReport() : Promise.resolve(null),
+  ]);
+
+  let currencyContext = '';
+  const additionalSources: GroundingSource[] = [];
+
+  if (liveRates?.usd) {
+    currencyContext = formatCurrencyContextForPrompt(liveRates);
+    additionalSources.push({
+      title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
+      url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
+    });
+  }
+
+  let indicatorsContext = '';
+  if (panel) {
+    indicatorsContext = formatIndicatorsContextForPrompt(panel);
+    if (panel.ipca) {
+      additionalSources.push({
+        title: `IBGE — IPCA Oficial (${panel.ipca.referencePeriod}): 12m ${panel.ipca.accumulated12m}%`,
+        url: panel.ipca.sourceUrl,
+      });
+    }
+    if (panel.inpc) {
+      additionalSources.push({
+        title: `IBGE — INPC Oficial (${panel.inpc.referencePeriod}): 12m ${panel.inpc.accumulated12m}%`,
+        url: panel.inpc.sourceUrl,
+      });
+    }
+    if (panel.selic) {
+      additionalSources.push({
+        title: `Banco Central — Taxa Selic (${panel.selic.annualRate}% a.a.)`,
+        url: panel.selic.sourceUrl,
+      });
+    }
+  }
+
+  let fuelContext = '';
+  if (fuelReport) {
+    fuelContext = formatFuelContextForPrompt(fuelReport);
+    additionalSources.push({
+      title: `ANP — Levantamento de Preços de Combustíveis (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
+      url: fuelReport.dieselS10Brasil.sourceUrl,
+    });
+  }
+
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
+  const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
+
+  const formattedContents = messages.map((m) => ({
+    role: m.role === 'model' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  let lastError: any = null;
+  for (const modelName of modelsToTry) {
+    try {
+      const responseStream = await ai.models.generateContentStream({
+        model: modelName,
+        contents: formattedContents,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.2,
+        },
+      });
+
+      let fullText = '';
+      for await (const chunk of responseStream) {
+        const token = chunk.text || '';
+        if (token) {
+          fullText += token;
+          yield { type: 'token', content: token };
+        }
+      }
+
+      const finalSources = [...additionalSources];
+      if (matchedCategory && !finalSources.some((s) => s.url.includes('bcb.gov.br'))) {
+        finalSources.push({
+          title: `Biblioteca Setorial Plurix: ${matchedCategory.category}`,
+          url: 'https://dadosabertos.bcb.gov.br/',
+        });
+      }
+
+      let suggestedAction: any = undefined;
+      const isAnalyticalResponse =
+        fullText.length > 300 &&
+        (matchedCategory !== null ||
+          /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
+
+      if (isAnalyticalResponse) {
+        suggestedAction = {
+          type: 'generate_bulletin',
+          label: 'Gerar boletim deste tema',
+          topic: matchedCategory ? matchedCategory.category : lastUserMsg.slice(0, 60),
+        };
+      }
+
+      yield {
+        type: 'done',
+        text: fullText,
+        sources: finalSources,
+        suggestedAction,
+      };
+      return;
+    } catch (err: any) {
+      lastError = err;
+      if (err?.status === 503 || err?.status === 404 || err?.status === 429) {
+        continue;
+      }
+    }
+  }
+
+  const errText = `> ⚠️ **Falha na comunicação:** Ocorreu um problema temporário de conexão com os servidores da Gemini API (${lastError?.message || 'Serviço indisponível'}). Por favor, tente novamente em instantes.`;
+  yield { type: 'token', content: errText };
+  yield { type: 'done', text: errText, sources: [], suggestedAction: undefined };
 }
 
 function processGeminiSuccess(

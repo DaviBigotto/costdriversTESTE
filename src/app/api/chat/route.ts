@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateEconomistResponse, ChatMessage } from '@/lib/gemini';
+import { generateEconomistResponse, streamEconomistResponse, ChatMessage } from '@/lib/gemini';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, topic } = body;
+    const { messages, topic, stream: wantsStream } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -28,6 +28,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Streaming em tempo real via Server-Sent Events (SSE)
+    if (wantsStream) {
+      const encoder = new TextEncoder();
+      const readableStream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of streamEconomistResponse(sanitizedMessages, topic)) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            }
+          } catch (err: any) {
+            console.error('Erro durante streaming:', err);
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  type: 'done',
+                  text: '> ⚠️ Erro inesperado durante o streaming da resposta.',
+                  sources: [],
+                })}\n\n`
+              )
+            );
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(readableStream, {
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          'Connection': 'keep-alive',
+        },
+      });
+    }
+
+    // Modo JSON tradicional síncrono
     const response = await generateEconomistResponse(sanitizedMessages, topic);
     return NextResponse.json(response);
   } catch (error: any) {
