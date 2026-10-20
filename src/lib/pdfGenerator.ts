@@ -750,7 +750,7 @@ export function generateBulletinPdf({
     { ind: 'Petróleo Brent Spot (ICE)', val: 'US$ 104,13/bbl', var: '+44,6% no ano', ref: 'Reuters / O Tempo · Pressão geopolítica' },
     { ind: 'Resina PEAD Filme (Braskem)', val: 'R$ 8.000/t aumento', var: '+30,0% em R$', ref: 'PlásticoNews / SIMPEP · Reajuste interno' },
     { ind: 'Tarifa Copel Alta Tensão', val: 'Homologada Aneel', var: '+21,9% 12m', ref: 'Aneel / Copel · Reajuste tarifário' },
-    { ind: 'Diesel S10 Médio Brasil (ANP)', val: 'R$ 6,04/litro', var: '+20,5% acumulado', ref: 'ANP Painel Dinâmico · Custo de frete' },
+    { ind: 'Diesel S10 na Bomba (Petrobras)', val: 'R$ 7,36/litro', var: '+20,6% acumulado', ref: 'precos.petrobras.com.br/precos-diesel · Custo frete' },
   ];
 
   mktIndRows.forEach((mi, idx) => {
@@ -1739,8 +1739,8 @@ export function generateBulletinPdf({
     { f: 'Braskem / PlásticoNews', d: 'Reajuste nacional de PEAD de +R$ 8.000/t em duas parcelas (+30% em R$)', dt: 'Setembro/2026' },
     { f: 'Camex / MDIC (Diário Oficial)', d: 'Direitos Antidumping definitivos sobre PEAD dos EUA (US$ 199/t) e Canadá (US$ 238/t)', dt: '26/03/2026' },
     { f: 'Copel / Aneel', d: 'Tarifa de energia elétrica industrial alta tensão com reajuste de +21,9% homologado', dt: 'Julho/2026' },
-    { f: 'ANP (Painel Dinâmico Oficial)', d: 'Preço médio do Diesel S10 a R$ 6,04/litro (SP: R$ 5,94 / PR: R$ 5,92 / MG: R$ 6,01)', dt: 'Semana 41/2026' },
-    { f: 'Petrobras (Preços Refinarias)', d: 'Acompanhamento de paridade e preços de venda de combustíveis às distribuidoras', dt: 'Outubro/2026' },
+    { f: 'Petrobras (precos.petrobras.com.br)', d: 'Diesel S10 na Bomba a R$ 7,36/L (SP: R$ 7,24 / PR: R$ 7,18 / MG: R$ 7,32 / RJ: R$ 7,48)', dt: 'Outubro/2026' },
+    { f: 'Petrobras (Composição Oficial)', d: 'Refinaria R$ 3,15 (42,8%) + Distr/Revenda R$ 2,22 (30,2%) + ICMS R$ 1,17 + Biodiesel R$ 0,82', dt: 'Outubro/2026' },
     { f: 'IBGE / SIDRA', d: 'IPCA acumulado em 12 meses de 4,20% e INPC acumulado em 4,00%', dt: 'Setembro/2026' },
     { f: 'Sindicato da Indústria Plástica', d: 'Dissídio coletivo da mão de obra da transformação plástica (+4,0%)', dt: 'Data-base 2026' },
     { f: 'AwesomeAPI / Banco Central (B3)', d: 'Câmbio comercial PTAX em R$ 4,99 / R$ 5,05 (dólar estável amortecendo resina)', dt: 'Ao vivo / Oficial' },

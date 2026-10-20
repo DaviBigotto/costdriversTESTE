@@ -17,10 +17,10 @@ describe('fuel module', () => {
   it('formats fuel context for prompt correctly', async () => {
     const report = await getFuelPriceReport();
     const formatted = formatFuelContextForPrompt(report);
-    expect(formatted).toContain('Diesel S10 (Média Brasil):');
-    expect(formatted).toContain('R$ 6.04/litro');
-    expect(formatted).toContain('SP: R$ 5.94/L');
+    expect(formatted).toContain('Diesel S10 (Média Brasil na Bomba):');
+    expect(formatted).toContain('R$ 7.36/litro');
+    expect(formatted).toContain('SP: R$ 7.24/L');
     expect(formatted).toContain('ANTT');
-    expect(formatted).toContain('ANP');
+    expect(formatted).toContain('PETROBRAS');
   });
 });

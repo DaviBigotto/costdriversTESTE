@@ -88,8 +88,8 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
 - Taxa Selic Meta: ${selic ? `${selic.annualRate}% a.a.` : '13.75% a.a.'}
 - Taxa CDI: ${cdi ? `${cdi.annualRate}% a.a.` : '13.65% a.a.'}
 
-4. COMBUSTÍVEIS & FRETE (ANP):
-- Diesel S10 (Média Brasil): R$ ${diesel ? diesel.averagePrice.toFixed(2) : '6.04'}/L (SP: R$ ${fuel?.regionalDiesel?.SP?.averagePrice.toFixed(2) || '5.94'}/L)`;
+4. COMBUSTÍVEIS & FRETE (Petrobras / ANP):
+- Diesel S10 (Média Brasil na Bomba): R$ ${diesel ? diesel.averagePrice.toFixed(2) : '7.36'}/L (SP: R$ ${fuel?.regionalDiesel?.SP?.averagePrice.toFixed(2) || '7.24'}/L)`;
 
     navigator.clipboard.writeText(summary);
     setCopied(true);
@@ -116,7 +116,7 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
 | **INPC (Dissídios & Serviços)** | ${inpc ? `${inpc.accumulated12m}%` : '4.29%'} (12m) | ${inpc && (inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc?.monthlyVariation || 0.82}% no mês | ${ipca?.referencePeriod || '09/2026'} | IBGE |
 | **Taxa Selic Meta** | ${selic ? `${selic.annualRate}% a.a.` : '13.75% a.a.'} | Estável | ${selic?.referencePeriod || '10/2026'} | Banco Central do Brasil |
 | **Taxa CDI** | ${cdi ? `${cdi.annualRate}% a.a.` : '13.65% a.a.'} | Estável | ${cdi?.referencePeriod || '10/2026'} | B3 |
-| **Diesel S10 (Frete & Logística)** | R$ ${diesel ? diesel.averagePrice.toFixed(2) : '6.04'}/L | ${diesel && diesel.weeklyVariationPercent >= 0 ? '+' : ''}${diesel ? diesel.weeklyVariationPercent.toFixed(2) : '-0.33'}% na semana | ${diesel?.period || 'Outubro/2026'} | ANP |
+| **Diesel S10 (Frete & Logística)** | R$ ${diesel ? diesel.averagePrice.toFixed(2) : '7.36'}/L | ${diesel && diesel.weeklyVariationPercent >= 0 ? '+' : ''}${diesel ? diesel.weeklyVariationPercent.toFixed(2) : '+0.41'}% na semana | ${diesel?.period || 'Outubro/2026'} | Petrobras / ANP |
 
 > **Orientação para o Comprador:** Utilize estes indicadores como premissas oficiais em análises de Should-Cost e negociações de reajuste com fornecedores.`;
 
@@ -378,18 +378,18 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
                     </div>
                     <div>
                       <div className="radar-card-kicker">COMBUSTÍVEIS & FRETE</div>
-                      <div className="radar-card-heading">Parâmetros de Transporte (ANP)</div>
+                      <div className="radar-card-heading">Parâmetros de Transporte (Petrobras / ANP)</div>
                     </div>
                   </div>
-                  <span className="radar-pill-source">ANP Semanal</span>
+                  <span className="radar-pill-source">Petrobras Oficial</span>
                 </div>
 
                 <div className="radar-fuel-spotlight">
                   <div className="radar-fuel-main">
                     <div>
-                      <div className="radar-fuel-label">Diesel S10 (Média Brasil)</div>
+                      <div className="radar-fuel-label">Diesel S10 (Média Brasil na Bomba)</div>
                       <div className="radar-fuel-price">
-                        R$ {diesel?.averagePrice.toFixed(2) || '6.04'}
+                        R$ {diesel?.averagePrice.toFixed(2) || '7.36'}
                         <span className="radar-val-unit">/ litro</span>
                       </div>
                     </div>
@@ -405,29 +405,29 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
                       )}
                       <span>
                         {diesel && diesel.weeklyVariationPercent >= 0 ? '+' : ''}
-                        {diesel?.weeklyVariationPercent || -0.33}% sem.
+                        {diesel?.weeklyVariationPercent || +0.41}% sem.
                       </span>
                     </div>
                   </div>
 
                   <div className="radar-regional-tags">
                     <div className="radar-hub-tag">
-                      <strong>SP</strong> R$ {fuel?.regionalDiesel?.SP?.averagePrice.toFixed(2) || '5.94'}
+                      <strong>SP</strong> R$ {fuel?.regionalDiesel?.SP?.averagePrice.toFixed(2) || '7.24'}
                     </div>
                     <div className="radar-hub-tag">
-                      <strong>MG</strong> R$ {fuel?.regionalDiesel?.MG?.averagePrice.toFixed(2) || '6.01'}
+                      <strong>MG</strong> R$ {fuel?.regionalDiesel?.MG?.averagePrice.toFixed(2) || '7.32'}
                     </div>
                     <div className="radar-hub-tag">
-                      <strong>RJ</strong> R$ {fuel?.regionalDiesel?.RJ?.averagePrice.toFixed(2) || '6.12'}
+                      <strong>RJ</strong> R$ {fuel?.regionalDiesel?.RJ?.averagePrice.toFixed(2) || '7.48'}
                     </div>
                     <div className="radar-hub-tag">
-                      <strong>PR</strong> R$ {fuel?.regionalDiesel?.PR?.averagePrice.toFixed(2) || '5.92'}
+                      <strong>PR</strong> R$ {fuel?.regionalDiesel?.PR?.averagePrice.toFixed(2) || '7.18'}
                     </div>
                   </div>
                 </div>
 
                 <div className="radar-card-footnote">
-                  Gatilho ANTT: Variações acumuladas &gt; 5% acionam repasse proporcional no frete (peso 35%–45%).
+                  Composição Petrobras: Refinaria (R$ 3,15) + Distribuição (R$ 2,22) + ICMS (R$ 1,17) + Biodiesel (R$ 0,82). Gatilho ANTT &gt; 5%.
                 </div>
               </div>
             </div>

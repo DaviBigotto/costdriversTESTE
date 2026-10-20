@@ -119,8 +119,8 @@ function getSectorSourceForCategory(categoryName: string): GroundingSource {
       url: 'https://www.abit.org.br/',
     },
     'Frete e logística rodoviária': {
-      title: 'ANP — Painel Dinâmico de Preços de Combustíveis (Diesel S10)',
-      url: 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/paineis-dinamicos-da-anp/painel-dinamico-de-precos-de-combustiveis-e-derivados-do-petroleo',
+      title: 'Petrobras — Preços dos Combustíveis e Composição (Diesel S10 na Bomba)',
+      url: 'https://precos.petrobras.com.br/precos-diesel',
     },
     'TI e telecom': {
       title: 'Banco Central do Brasil — Câmbio PTAX Oficial',
@@ -223,12 +223,8 @@ export async function generateEconomistResponse(
   if (fuelReport) {
     fuelContext = formatFuelContextForPrompt(fuelReport);
     additionalSources.push({
-      title: `ANP — Painel Dinâmico de Preços de Combustíveis (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
-      url: fuelReport.dieselS10Brasil.sourceUrl,
-    });
-    additionalSources.push({
-      title: 'Petrobras — Preços de Venda de Combustíveis às Distribuidoras (PPI / Refinarias)',
-      url: 'https://precos.petrobras.com.br/',
+      title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
+      url: 'https://precos.petrobras.com.br/precos-diesel',
     });
   }
 
@@ -431,12 +427,8 @@ export async function* streamEconomistResponse(
   if (fuelReport) {
     fuelContext = formatFuelContextForPrompt(fuelReport);
     additionalSources.push({
-      title: `ANP — Painel Dinâmico de Preços de Combustíveis (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
-      url: fuelReport.dieselS10Brasil.sourceUrl,
-    });
-    additionalSources.push({
-      title: 'Petrobras — Preços de Venda de Combustíveis às Distribuidoras (PPI / Refinarias)',
-      url: 'https://precos.petrobras.com.br/',
+      title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
+      url: 'https://precos.petrobras.com.br/precos-diesel',
     });
   }
 
@@ -651,12 +643,8 @@ export async function generateBulletinContent(
     const fuelReport = await getFuelPriceReport();
     fuelContext = formatFuelContextForPrompt(fuelReport);
     additionalSources.push({
-      title: `ANP — Painel Dinâmico de Preços de Combustíveis (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
-      url: fuelReport.dieselS10Brasil.sourceUrl,
-    });
-    additionalSources.push({
-      title: 'Petrobras — Preços de Venda de Combustíveis às Distribuidoras (PPI / Refinarias)',
-      url: 'https://precos.petrobras.com.br/',
+      title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
+      url: 'https://precos.petrobras.com.br/precos-diesel',
     });
   }
 

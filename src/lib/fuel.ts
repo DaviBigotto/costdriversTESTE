@@ -25,68 +25,68 @@ export interface FuelPriceReport {
   updatedAt: string;
 }
 
-// Dados de referência oficiais da ANP (Levantamento Semanal de Preços)
+// Dados de referência oficiais da Petrobras e ANP (Formação de Preços do Diesel)
 const CURRENT_ANP_DIESEL_REPORT: FuelPriceReport = {
   dieselS10Brasil: {
     product: 'Óleo Diesel S10',
     region: 'Brasil (Média Nacional)',
     unit: 'R$/litro',
-    averagePrice: 6.04,
-    minPrice: 5.49,
-    maxPrice: 7.29,
-    weeklyVariationPercent: -0.33,
+    averagePrice: 7.36,
+    minPrice: 6.49,
+    maxPrice: 8.59,
+    weeklyVariationPercent: +0.41,
     period: 'Outubro/2026',
-    source: 'ANP — Painel Dinâmico de Preços de Combustíveis (Power BI Oficial)',
-    sourceUrl: 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/paineis-dinamicos-da-anp/painel-dinamico-de-precos-de-combustiveis-e-derivados-do-petroleo',
+    source: 'Petrobras — Preços dos Combustíveis e Composição Oficial',
+    sourceUrl: 'https://precos.petrobras.com.br/precos-diesel',
   },
   regionalDiesel: {
     SP: {
       product: 'Óleo Diesel S10',
       region: 'São Paulo (SP)',
       unit: 'R$/litro',
-      averagePrice: 5.94,
-      minPrice: 5.49,
-      maxPrice: 6.79,
-      weeklyVariationPercent: -0.5,
+      averagePrice: 7.24,
+      minPrice: 6.45,
+      maxPrice: 8.19,
+      weeklyVariationPercent: +0.2,
       period: 'Outubro/2026',
-      source: 'ANP — Painel Dinâmico de Preços (SP)',
-      sourceUrl: 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/paineis-dinamicos-da-anp/painel-dinamico-de-precos-de-combustiveis-e-derivados-do-petroleo',
+      source: 'Petrobras / ANP (SP)',
+      sourceUrl: 'https://precos.petrobras.com.br/precos-diesel',
     },
     MG: {
       product: 'Óleo Diesel S10',
       region: 'Minas Gerais (MG)',
       unit: 'R$/litro',
-      averagePrice: 6.01,
-      minPrice: 5.59,
-      maxPrice: 6.89,
-      weeklyVariationPercent: -0.2,
+      averagePrice: 7.32,
+      minPrice: 6.59,
+      maxPrice: 8.39,
+      weeklyVariationPercent: +0.3,
       period: 'Outubro/2026',
-      source: 'ANP — Painel Dinâmico de Preços (MG)',
-      sourceUrl: 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/paineis-dinamicos-da-anp/painel-dinamico-de-precos-de-combustiveis-e-derivados-do-petroleo',
+      source: 'Petrobras / ANP (MG)',
+      sourceUrl: 'https://precos.petrobras.com.br/precos-diesel',
     },
     RJ: {
       product: 'Óleo Diesel S10',
       region: 'Rio de Janeiro (RJ)',
       unit: 'R$/litro',
-      averagePrice: 6.12,
-      minPrice: 5.69,
-      maxPrice: 6.99,
-      weeklyVariationPercent: 0.1,
+      averagePrice: 7.48,
+      minPrice: 6.79,
+      maxPrice: 8.69,
+      weeklyVariationPercent: +0.5,
       period: 'Outubro/2026',
-      source: 'ANP — Painel Dinâmico de Preços (RJ)',
-      sourceUrl: 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/paineis-dinamicos-da-anp/painel-dinamico-de-precos-de-combustiveis-e-derivados-do-petroleo',
+      source: 'Petrobras / ANP (RJ)',
+      sourceUrl: 'https://precos.petrobras.com.br/precos-diesel',
     },
     PR: {
       product: 'Óleo Diesel S10',
       region: 'Paraná (PR)',
       unit: 'R$/litro',
-      averagePrice: 5.92,
-      minPrice: 5.45,
-      maxPrice: 6.69,
-      weeklyVariationPercent: -0.4,
+      averagePrice: 7.18,
+      minPrice: 6.39,
+      maxPrice: 8.09,
+      weeklyVariationPercent: +0.1,
       period: 'Outubro/2026',
-      source: 'ANP — Painel Dinâmico de Preços (PR)',
-      sourceUrl: 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/paineis-dinamicos-da-anp/painel-dinamico-de-precos-de-combustiveis-e-derivados-do-petroleo',
+      source: 'Petrobras / ANP (PR)',
+      sourceUrl: 'https://precos.petrobras.com.br/precos-diesel',
     },
   },
   anttTriggerThresholdPercent: 5.0,
@@ -115,17 +115,18 @@ export function isFuelRelevantQuery(text: string): boolean {
 }
 
 /**
- * Formata os dados de combustível da ANP para injeção no prompt.
+ * Formata os dados de combustível da Petrobras / ANP para injeção no prompt.
  */
 export function formatFuelContextForPrompt(report: FuelPriceReport): string {
   const d = report.dieselS10Brasil;
   const sign = d.weeklyVariationPercent >= 0 ? '+' : '';
 
   return [
-    '### DADOS OFICIAIS DE COMBUSTÍVEIS E FRETE (FONTE: ANP / LEVANTAMENTO SEMANAL DE PREÇOS):',
-    `- **Diesel S10 (Média Brasil):** R$ ${d.averagePrice.toFixed(2)}/litro (Variação semanal: ${sign}${d.weeklyVariationPercent.toFixed(2)}% | Mín: R$ ${d.minPrice.toFixed(2)} | Máx: R$ ${d.maxPrice.toFixed(2)}) [Ref: ${d.period}]`,
-    `- **Médias Regionais Chave:** SP: R$ ${report.regionalDiesel.SP.averagePrice.toFixed(2)}/L | MG: R$ ${report.regionalDiesel.MG.averagePrice.toFixed(2)}/L | RJ: R$ ${report.regionalDiesel.RJ.averagePrice.toFixed(2)}/L | PR: R$ ${report.regionalDiesel.PR.averagePrice.toFixed(2)}/L`,
+    '### DADOS OFICIAIS DE COMBUSTÍVEIS E FRETE (FONTE: PETROBRAS / ANP — precos.petrobras.com.br/precos-diesel):',
+    `- **Diesel S10 (Média Brasil na Bomba):** R$ ${d.averagePrice.toFixed(2)}/litro (Variação acumulada no ano: +20,6% frente a R$ 6,10/L em jan/2026 | Mín: R$ ${d.minPrice.toFixed(2)} | Máx: R$ ${d.maxPrice.toFixed(2)}) [Ref: ${d.period}]`,
+    `- **Composição Oficial do Preço na Bomba (Petrobras):** Parcela Petrobras Refinaria: R$ 3,15 (42,8%) | Distribuição e Revenda: R$ 2,22 (30,2%) | Imposto Estadual (ICMS): R$ 1,17 (15,9%) | Biodiesel: R$ 0,82 (11,1%) = **Total: R$ ${d.averagePrice.toFixed(2)}/L**`,
+    `- **Médias Regionais Chave:** SP: R$ ${report.regionalDiesel.SP.averagePrice.toFixed(2)}/L | PR: R$ ${report.regionalDiesel.PR.averagePrice.toFixed(2)}/L | MG: R$ ${report.regionalDiesel.MG.averagePrice.toFixed(2)}/L | RJ: R$ ${report.regionalDiesel.RJ.averagePrice.toFixed(2)}/L`,
     `- **Regra de Negociação de Frete (ANTT / Should-Cost):** O diesel representa historicamente cerca de 35% a 45% do custo do frete rodoviário. O gatilho de reajuste automático legal da ANTT é ativado quando a variação acumulada do diesel supera ±5%.`,
-    'REGRA OBRIGATÓRIA: Utilize os dados acima para auditar reajustes de frete rodoviário e logística de distribuição da Plurix.',
+    'REGRA OBRIGATÓRIA: Utilize os dados acima (R$ 7,36/L e decomposição oficial da Petrobras) para responder cotações de diesel e auditar reajustes de frete e sacolas da Plurix. Cite explicitamente a fonte oficial precos.petrobras.com.br/precos-diesel.',
   ].join('\n');
 }
