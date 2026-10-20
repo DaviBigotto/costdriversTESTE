@@ -70,6 +70,65 @@ function getModelFallbackList(preferredModel: string): string[] {
 }
 
 /**
+ * Mapeia cada categoria da biblioteca de Cost Drivers para a entidade oficial ou regulatória legítima do setor.
+ */
+function getSectorSourceForCategory(categoryName: string): GroundingSource {
+  const sourcesMap: Record<string, GroundingSource> = {
+    'Sacolas plásticas (PEAD/PEBD)': {
+      title: 'ABIPLAST — Associação Brasileira da Indústria do Plástico',
+      url: 'https://www.abiplast.org.br/',
+    },
+    'Filmes, bandejas e embalagens plásticas': {
+      title: 'ABIPLAST — Associação Brasileira da Indústria do Plástico',
+      url: 'https://www.abiplast.org.br/',
+    },
+    'Embalagens de papel/papelão': {
+      title: 'Empapel — Associação Brasileira de Embalagens em Papel',
+      url: 'https://empapel.org.br/',
+    },
+    'Bobinas térmicas e etiquetas': {
+      title: 'ComexStat / MDIC — Estatísticas Oficiais de Importação de Papel Térmico',
+      url: 'https://comexstat.mdic.gov.br/',
+    },
+    'Material de limpeza e higiene': {
+      title: 'ABIPLA — Associação Brasileira das Indústrias de Produtos de Higiene e Limpeza',
+      url: 'https://abipla.org.br/',
+    },
+    'Limpeza e conservação terceirizada': {
+      title: 'IBGE — SIDRA (INPC e Dissídios Coletivos de Trabalho)',
+      url: 'https://sidra.ibge.gov.br/',
+    },
+    'Manutenção predial e refrigeração comercial': {
+      title: 'ABRAVA — Associação Brasileira de Refrigeração e Ar Condicionado',
+      url: 'https://abrava.com.br/',
+    },
+    'Uniformes e EPIs': {
+      title: 'ABIT — Associação Brasileira da Indústria Têxtil',
+      url: 'https://www.abit.org.br/',
+    },
+    'Frete dedicado e transporte de transferência': {
+      title: 'ANP — Levantamento de Preços de Combustíveis (Diesel S10)',
+      url: 'https://www.gov.br/anp/pt-br',
+    },
+    'TI e Telecom': {
+      title: 'Banco Central do Brasil — Câmbio PTAX Oficial',
+      url: 'https://www.bcb.gov.br/estabilidadefinanceira/historicocotacoes',
+    },
+    'Gráfica, encartes promocionais e material de PDV': {
+      title: 'ABIGRAF — Associação Brasileira da Indústria Gráfica',
+      url: 'https://abigraf.org.br/',
+    },
+  };
+
+  return (
+    sourcesMap[categoryName] || {
+      title: `Referencial Setorial Plurix: ${categoryName}`,
+      url: 'https://sidra.ibge.gov.br/',
+    }
+  );
+}
+
+/**
  * Executa a chamada à Gemini API para o assistente conversacional do Economista de Compras.
  * Implementa estratégia resiliente: tenta com Google Search Grounding; caso a cota do Grounding
  * esteja esgotada (429 RESOURCE_EXHAUSTED), realiza fallback automático para o modelo direto
@@ -219,13 +278,10 @@ export async function generateEconomistResponse(
       });
 
       const processed = processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
-      // Adiciona nota sutil de premissas/conhecimento se não houve fontes externas
+      // Adiciona a entidade regulatória ou setorial oficial correspondente à categoria
       const finalSources = [...processed.sources];
-      if (matchedCategory && !finalSources.some((s) => s.url.includes('bcb.gov.br'))) {
-        finalSources.push({
-          title: `Biblioteca Setorial Plurix: ${matchedCategory.category}`,
-          url: 'https://dadosabertos.bcb.gov.br/',
-        });
+      if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
+        finalSources.push(getSectorSourceForCategory(matchedCategory.category));
       }
 
       return {
@@ -391,11 +447,8 @@ export async function* streamEconomistResponse(
       }
 
       const finalSources = [...additionalSources];
-      if (matchedCategory && !finalSources.some((s) => s.url.includes('bcb.gov.br'))) {
-        finalSources.push({
-          title: `Biblioteca Setorial Plurix: ${matchedCategory.category}`,
-          url: 'https://dadosabertos.bcb.gov.br/',
-        });
+      if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
+        finalSources.push(getSectorSourceForCategory(matchedCategory.category));
       }
 
       let suggestedAction: any = undefined;
