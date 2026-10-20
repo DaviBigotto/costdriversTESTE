@@ -765,14 +765,18 @@ ${activeConversation.messages
                         <button
                           type="button"
                           className="toolbar-action-btn primary"
-                          onClick={() =>
+                          onClick={() => {
+                            const extracted =
+                              msg.content.match(/#\s*(?:BOLETIM|Boletim)[^—\n]*[—\-:]\s*([^\n]+)/i)?.[1]?.trim() ||
+                              activeConversation?.title ||
+                              'Sacolinha de supermercado';
                             generateBulletinPdf({
                               title: 'Boletim de Inteligência de Custos — Plurix',
-                              topic: activeConversation?.title || 'Compras Indiretas',
+                              topic: extracted,
                               markdownContent: msg.content,
                               sources: msg.sources || [],
-                            })
-                          }
+                            });
+                          }}
                           title="Baixar cópia em PDF oficial timbrado no padrão Plurix"
                         >
                           <FileDown size={12} /> Baixar PDF Oficial

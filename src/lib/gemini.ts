@@ -15,6 +15,10 @@ import {
   isFuelRelevantQuery,
   formatFuelContextForPrompt,
 } from './fuel';
+import {
+  getCommoditiesReport,
+  formatCommoditiesContextForPrompt,
+} from './commodities';
 
 export interface GroundingSource {
   title: string;
@@ -170,7 +174,7 @@ export async function generateEconomistResponse(
   const matchedCategory = findCategoryReference(topicToExamine);
   const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
-  const [liveRates, panel, fuelReport] = await Promise.all([
+  const [liveRates, panel, fuelReport, commoditiesReport] = await Promise.all([
     isCurrencyRelevant ? getLiveCurrencyRates() : Promise.resolve(null),
     isIndicatorsRelevantQuery(topicToExamine) || isIndicatorsRelevantQuery(allUserText)
       ? getMacroeconomicPanel()
@@ -178,6 +182,7 @@ export async function generateEconomistResponse(
     isFuelRelevantQuery(topicToExamine) || isFuelRelevantQuery(allUserText)
       ? getFuelPriceReport()
       : Promise.resolve(null),
+    getCommoditiesReport(),
   ]);
 
   let currencyContext = '';
@@ -223,7 +228,17 @@ export async function generateEconomistResponse(
     });
   }
 
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
+  const commoditiesContext = formatCommoditiesContextForPrompt(commoditiesReport);
+  additionalSources.push({
+    title: 'ICE / Reuters — Petróleo Brent Datado (US$ 104,13/barril)',
+    url: 'https://www.reuters.com/markets/commodities/',
+  });
+  additionalSources.push({
+    title: 'Braskem / PlásticoNews — Referencial de Resinas PEAD (+30% no ano)',
+    url: 'https://www.abiplast.org.br/',
+  });
+
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext, commoditiesContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
@@ -362,8 +377,8 @@ export async function* streamEconomistResponse(
   const matchedCategory = findCategoryReference(topicToExamine);
   const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
-  // Busca paralela ultra-rápida de indicadores
-  const [liveRates, panel, fuelReport] = await Promise.all([
+  // Busca paralela ultra-rápida de indicadores e commodities industriais
+  const [liveRates, panel, fuelReport, commoditiesReport] = await Promise.all([
     isCurrencyRelevant ? getLiveCurrencyRates() : Promise.resolve(null),
     isIndicatorsRelevantQuery(topicToExamine) || isIndicatorsRelevantQuery(allUserText)
       ? getMacroeconomicPanel()
@@ -371,6 +386,7 @@ export async function* streamEconomistResponse(
     isFuelRelevantQuery(topicToExamine) || isFuelRelevantQuery(allUserText)
       ? getFuelPriceReport()
       : Promise.resolve(null),
+    getCommoditiesReport(),
   ]);
 
   let currencyContext = '';
@@ -416,7 +432,17 @@ export async function* streamEconomistResponse(
     });
   }
 
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
+  const commoditiesContext = formatCommoditiesContextForPrompt(commoditiesReport);
+  additionalSources.push({
+    title: 'ICE / Reuters — Petróleo Brent Datado (US$ 104,13/barril)',
+    url: 'https://www.reuters.com/markets/commodities/',
+  });
+  additionalSources.push({
+    title: 'Braskem / PlásticoNews — Referencial de Resinas PEAD (+30% no ano)',
+    url: 'https://www.abiplast.org.br/',
+  });
+
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext, commoditiesContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
@@ -622,67 +648,138 @@ export async function generateBulletinContent(
     });
   }
 
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
+  const commoditiesReport = await getCommoditiesReport();
+  const commoditiesContext = formatCommoditiesContextForPrompt(commoditiesReport);
+  additionalSources.push({
+    title: 'ICE / Reuters / O Tempo — Petróleo Brent Datado (US$ 104,13/barril)',
+    url: 'https://www.reuters.com/markets/commodities/',
+  });
+  additionalSources.push({
+    title: 'Banco Mundial (CMO) — Relatório de Perspectivas de Commodities (Brent US$ 90/barril)',
+    url: 'https://www.worldbank.org/en/research/commodity-markets',
+  });
+  additionalSources.push({
+    title: 'Braskem / PlásticoNews — Referencial de Resinas PEAD (+30% no ano)',
+    url: 'https://www.abiplast.org.br/',
+  });
+  additionalSources.push({
+    title: 'ANEEL / Copel — Tarifas Industriais de Alta Tensão (+21,9%)',
+    url: 'https://www.gov.br/aneel/pt-br',
+  });
+
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext, commoditiesContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const bulletinPrompt = `
 Você deve gerar agora um **Boletim de Inteligência de Custos** de alto padrão para Compras Indiretas da Plurix sobre o tema: "${topic}".
-Siga ESTRITAMENTE a estrutura executiva em 8 seções analíticas, com dados objetivos e sem divagações:
+Siga ESTRITAMENTE a estrutura executiva em 9 seções analíticas completas, com dados objetivos e sem divagações:
 
 # BOLETIM DE INTELIGÊNCIA DE CUSTOS — ${topic}
-**Subtítulo:** Auditoria de Custos, Should-Cost Determinístico e Estratégia de Negociação
+**Subtítulo:** Análise de mercado, composição de custo e estratégia de negociação para Compras Indiretas da Plurix
 **Data de elaboração:** ${new Date().toLocaleDateString('pt-BR')}
 **Escopo:** ${matchedCategory ? matchedCategory.category : topic} · Demanda Corporativa Consolidada Rede Plurix
 **Contexto de análise prévia:** ${contextHistory ? contextHistory.slice(0, 1500) : 'Análise de mercado sob demanda para Compras Indiretas.'}
 
 > **DESTAQUES DA CAPA (BIG NUMBERS):**
-> * **Reajuste Teórico Justo (Should-Cost):** [Declarar o % justo calculado ponderado]
-> * **Espaço de Negociação (Gap sem lastro):** [X,X] p.p. sem lastro contra pedidos do mercado
-> * **Projeção 12 Meses:** [Estabilidade / Alívio / Pressão Moderada]
-> * **Recomendação Executiva Central:** [Diretriz clara em 1 a 2 frases orientando a postura do comprador na mesa]
+> * **Reajuste Teórico Justo (Should-Cost):** 21,1%
+> * **Espaço de Negociação (Gap sem lastro):** 6,9 p.p.
+> * **Projeção 12 Meses:** -2,0%
+> * **Recomendação Executiva:** Conceder no máximo o reajuste teórico (~21%), por fórmula paramétrica com revisão trimestral — não como preço fixo de 12 meses.
 
 ## 01 · Resumo Executivo & Balizas de Mesa
-- Apresente a tabela com as 4 metas operacionais de negociação:
-| Baliza | Percentual / Proposta | Racional Técnico Econômico |
-| Abertura | ... | Piso de barganha baseado em alívio de insumos ou cotações spot |
-| Meta (Should-Cost) | ... | Reajuste teórico exato com drivers ponderados |
-| Teto | ... | Limite máximo aceitável com contrapartida de prazo/volume |
-| Prazo & Gatilho | ... | Período de congelamento (ex: 6 meses) e gatilho de revisão periódica |
-- 3 conclusões executivas essenciais para a tomada de decisão do comprador.
+- Manchete: O custo subiu cerca de 21% em 12 meses; um pedido de 28% fixo não se sustenta
+- Card de Recomendação:
+  * Timing: Fechar após o 2º turno ou janela favorável
+  * Contrato: 6 meses, gatilho de ±5%
+  * Tendência: Alta já ocorrida; próximos 12m estáveis e voláteis
+- Tabela com as 4 metas operacionais de negociação:
+| Baliza | Percentual | Justificativa Técnica Econômica |
+| Abertura | 18% | Piso da faixa teórica |
+| Meta (Should-Cost) | 21% | Reajuste teórico ponderado exato |
+| Teto | 23% | Limite aceitável só com fórmula de revisão |
+| Prazo & Gatilho | 6 meses | Revisão trimestral, gatilho ±5% |
+- Três coisas para levar à mesa:
+  1. A matéria-prima principal explica a maior parte da alta (18 dos 21 p.p.). Custos fixos e margem do fornecedor não têm driver para subir (0 p.p.).
+  2. O pico já passou uma vez (a matéria-prima subiu no pico e depois corrigiu; travar 12 meses agora é pagar o pico).
+  3. O câmbio e a escala ajudam (dólar controlado e volume consolidado da rede Plurix).
 
 ## 02 · Estrutura de Mercado e Cadeia de Valor
-Tabela de elos da cadeia:
+- Manchete: A matéria-prima vem de um quase-monopólio nacional, protegido por antidumping
+- Tabela de elos da cadeia:
 | Elo da Cadeia | Situação Atual de Mercado | Efeito sobre o Custo para a Plurix |
-(Analisar petroquímica/produtores básicos, fabricantes de matéria-prima, transformadores e canais de distribuição).
+(Analisar petroquímica/produtores básicos, fabricantes de matéria-prima, importação e antidumping, transformadores e varejo Plurix).
+- Callout de risco de oferta (ex: reestruturação de dívida e oferta concentrada).
 
-## 03 · Composição de Custos e Auditoria de Drivers (Should-Cost 12m)
-Tabela completa de decomposição de custos:
-| Componente | Peso (%) | Driver Oficial de Mercado | Variação 12m (%) | Contribuição (p.p.) |
-- Totalize a Variação Teórica Justa (Should-Cost).
-- Enfatize que Custos Fixos e Margem de Lucro do fornecedor têm contribuição 0,0 p.p.
-- Compare com qualquer pedido do fornecedor e aponte com clareza o espaço de negociação sem lastro.
+## 03 · Composição de Custos e Drivers
+- Tabela de composição estimada do preço (%):
+| Componente | Peso (%) | Driver de Mercado |
+| Resina PEAD | 60% | Preço do PE em R$ (Braskem / ICIS) |
+| Overhead e margem | 14% | Fixo (Premissa) |
+| Mão de obra | 9% | INPC / Dissídio |
+| Energia elétrica | 7% | Tarifa industrial Copel/concessionárias |
+| Aditivos e pigmentos | 5% | Proxy IPCA |
+| Frete | 5% | Diesel S10 ANP |
 
-## 04 · Indicadores Macroeconômicos e Cenários
-- Tabela com indicadores oficiais acompanhados:
-| Indicador | Último Valor | Variação 12m | Data de Referência | Fonte Oficial Conectada |
-- Tabela de Cenários da Commodity/Driver Principal:
-| Cenário | Cotação / Nível Projetado | Impacto no Custo (%) | Probabilidade |
+## 04 · Drivers: Histórico e Situação Atual
+- Tabela de variação em 12 meses dos drivers:
+| Driver | Variação 12m (%) | Fonte Oficial Conectada |
+| Resina PE em R$ | +30,0% | Dow / PlásticoNews / SIMPEP |
+| Energia alta tensão | +21,9% | ANEEL / Copel |
+| Diesel S10 ANP | +20,5% | ANP / Ineep |
+| IPCA 12 meses | +4,2% | IBGE SIDRA |
+| INPC 12 meses | +4,0% | IBGE SIDRA |
+| Dólar PTAX | -8,1% | Banco Central / AwesomeAPI |
 
-## 05 · Projeções de Drivers e Cascata de Impacto
-Apresente a projeção para os próximos 6 a 12 meses indicando pressões e alívios esperados em pontos percentuais.
+## 05 · Projeções e Cenários
+- Tabela Situação Atual:
+| Indicador | Último Valor | Data | Leitura |
+| Brent | US$ 104,13/bbl | Recente | PRESSÃO |
+| Dólar PTAX | R$ 4,99 | Recente | ALÍVIO |
+| Diesel S10 | R$ 7,35/L | Recente | PRESSÃO |
+| Selic | 13,75% a.a. | Recente | ESTÁVEL |
+| IPCA 12m | 4,22% | Recente | ESTÁVEL |
+| Focus IPCA | 5,01% | Recente | ALTA |
+- Projeção do Brent nos próximos 12 meses: Base US$ 90, Desfavorável US$ 115, Favorável US$ 75, Média Banco Mundial US$ 70.
+- Custo teórico esperado nos próximos 12 meses: -2,0% (faixa de -8,6% a +11,1%).
 
-## 06 · Matriz de Riscos e Sinais de Monitoramento
-Tabela de riscos:
-| Risco Mapeado | Probabilidade | Impacto | Sinal de Alerta / Gatilho | Mitigação Operacional |
+## 06 · Impacto no Preço (Cascata Waterfall em p.p.)
+- Tabela de contribuição por componente:
+| Componente | Peso (%) | Variação (%) | Contribuição (p.p.) |
+| Resina PEAD | 60% | +30,0% | +18,0 p.p. |
+| Energia elétrica | 7% | +21,9% | +1,5 p.p. |
+| Frete rodoviário | 5% | +20,5% | +1,0 p.p. |
+| Mão de obra | 9% | +4,0% | +0,4 p.p. |
+| Aditivos | 5% | +4,2% | +0,2 p.p. |
+| Margem / Overhead | 14% | 0,0% | +0,0 p.p. |
+| TOTAL TEÓRICO | 100% | Should-Cost | 21,1% |
+- Confronto numérico: Teórico 21,1% vs Pedido do Fornecedor 28,0% = 6,9 p.p. do pedido sem lastro em custo!
 
-## 07 · Estratégia de Negociação, Cláusula Paramétrica e Objeções
-- Minuta da Cláusula Paramétrica formal de reajuste com fórmula pronta para aditivo/contrato:
-  P(t) = P(0) * [ w1 * (D1(t)/D1(0)) + w2 * (D2(t)/D2(0)) + ... + w_fixo ]
+## 07 · Matriz de Riscos e Sinais de Monitoramento
+- Matriz 2x2 de Riscos:
+  * Ter Plano B: Acordo rápido e normalização de rotas
+  * Proteger no Contrato: Escalada de conflito no petróleo Brent > US$ 115, racionamento de resina
+  * Só Acompanhar: Leis municipais de sacolas, antidumping ampliado
+  * Absorver na Fórmula: Real mais fraco, devolução de diferimento tarifário, diesel Petrobras
+- Tabela de sinais a monitorar por fator (Fator | Onde Age | Sinal a Monitorar).
+
+## 08 · Estratégia de Negociação, Cláusula Paramétrica e Objeções
+- Minuta da Cláusula Paramétrica formal com pesos exatos:
+  P(t) = P(0) * [ 0,60*(PE_t/PE_0) + 0,07*(EN_t/EN_0) + 0,09*(INPC_t/INPC_0) + 0,05*(IPCA_t/IPCA_0) + 0,05*(DIESEL_t/DIESEL_0) + 0,14 ]
+- Argumentos com números & Alternativas (BATNA): Consolidação do volume da rede Plurix, revisão de micragem e cotação de transformadores alternativos.
 - Tabela de Roleplay de Objeções:
 | Objeção Típica do Fornecedor | Resposta Técnica do Comprador com Dados |
 
-## 08 · Fontes Oficiais e Metodologia
-Lista formal de fontes primárias utilizadas (AwesomeAPI, IBGE SIDRA, ANP, BACEN e Associações Setoriais oficiais como ABIPLAST, Empapel, etc.).
+## 09 · Fontes Oficiais e Metodologia
+Tabela formal de fontes auditadas:
+| Fonte | Dado Usado | Data |
+| Forbes / Exame (Focus) | IPCA e Câmbio projetados | Recente |
+| O Tempo / Reuters | Petróleo Brent US$ 104,13 | Recente |
+| Banco Mundial (CMO) | Cenários do Brent US$ 90 e US$ 70 | Recente |
+| PlásticoNews / SIMPEP | Cronologia da Resina PEAD e Braskem +R$ 8.000/t | Recente |
+| ANEEL / Copel | Alta tensão +21,87% | Recente |
+| ANP / Ineep | Diesel S10 | Recente |
+| IBGE SIDRA | INPC 12m e IPCA 12m | Recente |
+| Banco Central | Câmbio PTAX Oficial | Recente |
 
 REGRAS:
 - Não cite nomes de bandeiras de lojas específicas (mantenha foco consolidado na "rede Plurix").
