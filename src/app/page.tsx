@@ -757,19 +757,23 @@ ${activeConversation.messages
                       </button>
 
                       {/* Se for um boletim, oferece o botão para baixar ou rebaixar o PDF oficial */}
-                      {msg.content.includes('Boletim de Mercado') && (
+                      {(msg.content.includes('Boletim de Mercado') ||
+                        msg.content.includes('BOLETIM DE INTELIGÊNCIA') ||
+                        msg.content.includes('Boletim de Inteligência') ||
+                        msg.content.includes('# BOLETIM') ||
+                        msg.content.includes('# Boletim')) && (
                         <button
                           type="button"
                           className="toolbar-action-btn primary"
                           onClick={() =>
                             generateBulletinPdf({
-                              title: 'Boletim de Mercado — Plurix',
+                              title: 'Boletim de Inteligência de Custos — Plurix',
                               topic: activeConversation?.title || 'Compras Indiretas',
                               markdownContent: msg.content,
                               sources: msg.sources || [],
                             })
                           }
-                          title="Baixar cópia em PDF oficial timbrado"
+                          title="Baixar cópia em PDF oficial timbrado no padrão Plurix"
                         >
                           <FileDown size={12} /> Baixar PDF Oficial
                         </button>

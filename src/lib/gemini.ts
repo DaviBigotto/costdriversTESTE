@@ -614,26 +614,66 @@ export async function generateBulletinContent(
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const bulletinPrompt = `
-Você deve gerar agora um **Boletim de Mercado Sob Demanda** para Compras Indiretas da Plurix sobre o tema: "${topic}".
-Siga ESTRITAMENTE a estrutura corporativa definida na metodologia do Economista de Compras:
+Você deve gerar agora um **Boletim de Inteligência de Custos** de alto padrão para Compras Indiretas da Plurix sobre o tema: "${topic}".
+Siga ESTRITAMENTE a estrutura executiva em 8 seções analíticas, com dados objetivos e sem divagações:
 
-# Boletim de Mercado — ${topic}
+# BOLETIM DE INTELIGÊNCIA DE CUSTOS — ${topic}
+**Subtítulo:** Auditoria de Custos, Should-Cost Determinístico e Estratégia de Negociação
 **Data de elaboração:** ${new Date().toLocaleDateString('pt-BR')}
-**Escopo:** ${matchedCategory ? matchedCategory.category : topic}
-**Contexto de análise prévia:** ${contextHistory ? contextHistory.slice(0, 1500) : 'Análise econômica sob demanda do comprador.'}
+**Escopo:** ${matchedCategory ? matchedCategory.category : topic} · Demanda Corporativa Consolidada Rede Plurix
+**Contexto de análise prévia:** ${contextHistory ? contextHistory.slice(0, 1500) : 'Análise de mercado sob demanda para Compras Indiretas.'}
 
-Estrutura OBRIGATÓRIA:
-## 1. Resumo executivo (até 5 pontos diretos com a conclusão para Compras)
-## 2. O que está acontecendo (acontecimentos recentes com datas de ocorrência e publicação)
-## 3. Indicadores econômicos acompanhados (Tabela Markdown com: Indicador | Último Valor | Variação Período | Data de Referência | Fonte)
-## 4. Principais Cost Drivers (Fatores diretos e indiretos, explicando o canal de transmissão)
-## 5. Impacto para Compras Indiretas (Quais categorias/itens são afetados e como)
-## 6. Riscos e Oportunidades (Separar fatos confirmados de hipóteses e riscos)
-## 7. Implicações para a Negociação (Pontos a checar com fornecedores, argumentos com dados, perguntas-chave)
-## 8. O que monitorar a seguir (Gatilhos, datas-base e eventos críticos)
-## 9. Fontes consultadas (Lista de fontes com datas e links das pesquisas)
+> **DESTAQUES DA CAPA (BIG NUMBERS):**
+> * **Reajuste Teórico Justo (Should-Cost):** [Declarar o % justo calculado ponderado]
+> * **Espaço de Negociação (Gap sem lastro):** [X,X] p.p. sem lastro contra pedidos do mercado
+> * **Projeção 12 Meses:** [Estabilidade / Alívio / Pressão Moderada]
+> * **Recomendação Executiva Central:** [Diretriz clara em 1 a 2 frases orientando a postura do comprador na mesa]
+
+## 01 · Resumo Executivo & Balizas de Mesa
+- Apresente a tabela com as 4 metas operacionais de negociação:
+| Baliza | Percentual / Proposta | Racional Técnico Econômico |
+| Abertura | ... | Piso de barganha baseado em alívio de insumos ou cotações spot |
+| Meta (Should-Cost) | ... | Reajuste teórico exato com drivers ponderados |
+| Teto | ... | Limite máximo aceitável com contrapartida de prazo/volume |
+| Prazo & Gatilho | ... | Período de congelamento (ex: 6 meses) e gatilho de revisão periódica |
+- 3 conclusões executivas essenciais para a tomada de decisão do comprador.
+
+## 02 · Estrutura de Mercado e Cadeia de Valor
+Tabela de elos da cadeia:
+| Elo da Cadeia | Situação Atual de Mercado | Efeito sobre o Custo para a Plurix |
+(Analisar petroquímica/produtores básicos, fabricantes de matéria-prima, transformadores e canais de distribuição).
+
+## 03 · Composição de Custos e Auditoria de Drivers (Should-Cost 12m)
+Tabela completa de decomposição de custos:
+| Componente | Peso (%) | Driver Oficial de Mercado | Variação 12m (%) | Contribuição (p.p.) |
+- Totalize a Variação Teórica Justa (Should-Cost).
+- Enfatize que Custos Fixos e Margem de Lucro do fornecedor têm contribuição 0,0 p.p.
+- Compare com qualquer pedido do fornecedor e aponte com clareza o espaço de negociação sem lastro.
+
+## 04 · Indicadores Macroeconômicos e Cenários
+- Tabela com indicadores oficiais acompanhados:
+| Indicador | Último Valor | Variação 12m | Data de Referência | Fonte Oficial Conectada |
+- Tabela de Cenários da Commodity/Driver Principal:
+| Cenário | Cotação / Nível Projetado | Impacto no Custo (%) | Probabilidade |
+
+## 05 · Projeções de Drivers e Cascata de Impacto
+Apresente a projeção para os próximos 6 a 12 meses indicando pressões e alívios esperados em pontos percentuais.
+
+## 06 · Matriz de Riscos e Sinais de Monitoramento
+Tabela de riscos:
+| Risco Mapeado | Probabilidade | Impacto | Sinal de Alerta / Gatilho | Mitigação Operacional |
+
+## 07 · Estratégia de Negociação, Cláusula Paramétrica e Objeções
+- Minuta da Cláusula Paramétrica formal de reajuste com fórmula pronta para aditivo/contrato:
+  P(t) = P(0) * [ w1 * (D1(t)/D1(0)) + w2 * (D2(t)/D2(0)) + ... + w_fixo ]
+- Tabela de Roleplay de Objeções:
+| Objeção Típica do Fornecedor | Resposta Técnica do Comprador com Dados |
+
+## 08 · Fontes Oficiais e Metodologia
+Lista formal de fontes primárias utilizadas (AwesomeAPI, IBGE SIDRA, ANP, BACEN e Associações Setoriais oficiais como ABIPLAST, Empapel, etc.).
 
 REGRAS:
+- Não cite nomes de bandeiras de lojas específicas (mantenha foco consolidado na "rede Plurix").
 - Fundamente as análises na metodologia de Cost Drivers e na biblioteca do setor.
 - Não invente dados numéricos como fatos comprovados; declare premissas e estimativas.
 ${currencyContext ? `- COTAÇÃO ATUAL DO DÓLAR E EURO (AwesomeAPI / Radar de Mercado): Use rigorosamente os dados oficiais informados nas instruções do sistema. Toda menção ao valor atual do dólar deve seguir a base oficial da AwesomeAPI (~R$ 5,05 a R$ 5,06). NUNCA utilize valores desatualizados como 5,75.` : ''}
