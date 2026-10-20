@@ -79,7 +79,7 @@ function getSectorSourceForCategory(categoryName: string): GroundingSource {
       url: 'https://www.abiplast.org.br/',
     },
     'Filmes, bandejas e embalagens plásticas': {
-      title: 'ABIPLAST — Associação Brasileira da Indústria do Plástico',
+      title: 'ABIPLAST / Plastivida — Transformação e Embalagens Plásticas',
       url: 'https://www.abiplast.org.br/',
     },
     'Embalagens de papel/papelão': {
@@ -98,25 +98,37 @@ function getSectorSourceForCategory(categoryName: string): GroundingSource {
       title: 'IBGE — SIDRA (INPC e Dissídios Coletivos de Trabalho)',
       url: 'https://sidra.ibge.gov.br/',
     },
-    'Manutenção predial e refrigeração comercial': {
-      title: 'ABRAVA — Associação Brasileira de Refrigeração e Ar Condicionado',
+    'Segurança e vigilância': {
+      title: 'MTE / FENAVIST — Convenção Coletiva dos Vigilantes e Adicional de Periculosidade',
+      url: 'https://fenavist.org.br/',
+    },
+    'Manutenção predial e refrigeração': {
+      title: 'ABRAVA — Associação Brasileira de Refrigeração, Ar Condicionado e Ventilação',
       url: 'https://abrava.com.br/',
     },
-    'Uniformes e EPIs': {
-      title: 'ABIT — Associação Brasileira da Indústria Têxtil',
+    'Energia elétrica': {
+      title: 'CCEE / ANEEL — Preço de Liquidação das Diferenças (PLD) e Tarifas Reguladas',
+      url: 'https://www.ccee.org.br/',
+    },
+    'Uniformes e EPI': {
+      title: 'ABIT / ANIMASEG — Associação Brasileira da Indústria Têxtil e Setor de EPIs',
       url: 'https://www.abit.org.br/',
     },
-    'Frete dedicado e transporte de transferência': {
+    'Frete e logística rodoviária': {
       title: 'ANP — Levantamento de Preços de Combustíveis (Diesel S10)',
       url: 'https://www.gov.br/anp/pt-br',
     },
-    'TI e Telecom': {
+    'TI e telecom': {
       title: 'Banco Central do Brasil — Câmbio PTAX Oficial',
       url: 'https://www.bcb.gov.br/estabilidadefinanceira/historicocotacoes',
     },
-    'Gráfica, encartes promocionais e material de PDV': {
+    'Gráfica e material de PDV': {
       title: 'ABIGRAF — Associação Brasileira da Indústria Gráfica',
       url: 'https://abigraf.org.br/',
+    },
+    'Paletes de madeira e movimentação': {
+      title: 'IBÁ / CEPEA — Indústria Brasileira de Árvores e Cotações Florestais',
+      url: 'https://iba.org/',
     },
   };
 

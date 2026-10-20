@@ -171,6 +171,18 @@ export const COST_BREAKDOWN_LIBRARY: CategoryComposition[] = [
     ],
     notes: 'Papel couché e LWC têm forte dependência de importação ou cotação internacional.',
   },
+  {
+    category: 'Paletes de madeira e movimentação',
+    keywords: ['palete', 'paletes', 'pallet', 'pallets', 'pbr', 'estrado', 'madeira'],
+    components: [
+      { name: 'Madeira serrada (Pinus/Eucalipto)', weightRange: '45–55%', defaultWeight: 50, driver: 'Preço madeira serrada, IBÁ, CEPEA Florestal', driverSource: 'IBÁ / CEPEA' },
+      { name: 'Fixadores e pregos espiralados', weightRange: '8–12%', defaultWeight: 10, driver: 'Aço / IPA metalurgia FGV', driverSource: 'FGV IBRE' },
+      { name: 'Montagem e mão de obra', weightRange: '15–20%', defaultWeight: 17, driver: 'INPC / Dissídio marceneiros/madeira', driverSource: 'IBGE / Sindicato' },
+      { name: 'Frete e distribuição', weightRange: '8–10%', defaultWeight: 9, driver: 'Diesel ANP', driverSource: 'ANP' },
+      { name: 'Tratamento fitossanitário (HT/NIMF 15) e margem', weightRange: '10–15%', defaultWeight: 14, driver: 'Fixo / MAPA', driverSource: 'Premissa' },
+    ],
+    notes: 'Paletes padrão PBR homologados exigem madeira reflorestada seca e pregos certificados. Reutilização e logística reversa entre lojas e CD geram economias superiores a 25%.',
+  },
 ];
 
 /**
