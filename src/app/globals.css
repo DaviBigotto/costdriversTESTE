@@ -187,6 +187,16 @@ html, body {
   font-weight: 600;
 }
 
+.conversation-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
 .conversation-title {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -194,27 +204,83 @@ html, body {
   flex: 1;
 }
 
-.conversation-delete {
+.conversation-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.conversation-item:hover .conversation-actions,
+.conversation-item.active .conversation-actions {
+  opacity: 1;
+}
+
+.conversation-action-btn {
   background: transparent;
   border: none;
   color: var(--muted);
   cursor: pointer;
-  opacity: 0;
-  padding: 2px 4px;
+  padding: 3px 5px;
   border-radius: 4px;
   display: flex;
   align-items: center;
+  justify-content: center;
   transition: all 0.15s;
 }
 
-.conversation-item:hover .conversation-delete {
-  opacity: 0.8;
+.conversation-action-btn:hover {
+  color: var(--navy);
+  background: rgba(0, 20, 125, 0.08);
 }
 
-.conversation-delete:hover {
-  opacity: 1 !important;
+.conversation-action-btn.delete:hover {
   color: var(--neg);
   background: var(--neg-l);
+}
+
+.conversation-action-btn.confirm {
+  color: var(--pos);
+}
+
+.conversation-action-btn.confirm:hover {
+  background: var(--pos-l);
+}
+
+.conversation-action-btn.cancel:hover {
+  color: var(--neg);
+  background: var(--neg-l);
+}
+
+.conversation-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.conversation-title-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--navy);
+  background: #FFFFFF;
+  border: 1px solid var(--navy);
+  border-radius: 4px;
+  padding: 3px 6px;
+  outline: none;
+  font-weight: 500;
+  box-shadow: 0 0 0 2px rgba(0, 20, 125, 0.1);
+}
+
+.conversation-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .sidebar-footer {
@@ -321,11 +387,78 @@ html, body {
   background: var(--brd2);
 }
 
+.topbar-title-container {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-title-clickable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.topbar-title-clickable:hover {
+  background: rgba(0, 20, 125, 0.05);
+}
+
+.topbar-title-clickable:hover .topbar-title-edit-icon {
+  opacity: 0.6;
+}
+
+.topbar-title-edit-icon {
+  opacity: 0;
+  color: var(--muted);
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
 .topbar-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
+}
+
+.topbar-title-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar-title-input {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--navy);
+  background: #FFFFFF;
+  border: 1px solid var(--navy);
+  border-radius: 5px;
+  padding: 2px 8px;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 20, 125, 0.1);
+  min-width: 180px;
+}
+
+.topbar-title-btn {
+  background: var(--navy);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.topbar-title-btn:hover {
+  background: var(--navy2);
 }
 
 .topbar-badge {

@@ -29,6 +29,8 @@ import {
   Truck,
   FileDown,
   Activity,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { generateBulletinPdf } from '@/lib/pdfGenerator';
 import {
@@ -55,6 +57,7 @@ interface Conversation {
   title: string;
   messages: Message[];
   updatedAt: string;
+  isCustomTitle?: boolean;
 }
 
 const STORAGE_KEY = 'plurix_economista_conversations_v2';
@@ -71,8 +74,11 @@ export default function EconomistaDeComprasPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState<number>(0);
   const [isCommandMenuDismissed, setIsCommandMenuDismissed] = useState<boolean>(false);
+  const [editingConvId, setEditingConvId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Autocomplete de comandos com '/'
   const isSlashCommandActive =
@@ -200,6 +206,35 @@ export default function EconomistaDeComprasPage() {
     }
   };
 
+  const startEditingConversation = (id: string, currentTitle: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingConvId(id);
+    setEditingTitle(currentTitle || '');
+    setTimeout(() => {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }, 50);
+  };
+
+  const saveConversationTitle = (id: string) => {
+    const trimmed = editingTitle.trim();
+    if (trimmed) {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, title: trimmed, isCustomTitle: true } : c
+        )
+      );
+    }
+    setEditingConvId(null);
+    setEditingTitle('');
+  };
+
+  const cancelEditingConversation = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
+    setEditingConvId(null);
+    setEditingTitle('');
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const text = textToSend || inputMessage;
     if (!text.trim() || isLoading) return;
@@ -226,7 +261,11 @@ export default function EconomistaDeComprasPage() {
 
     const currentMessages = activeConversation ? [...activeConversation.messages, userMsg] : [userMsg];
     const isFirstMessage = currentMessages.length === 1;
-    const conversationTitle = isFirstMessage ? text.trim().slice(0, 28) : (activeConversation?.title || 'Consulta');
+    const conversationTitle = activeConversation?.isCustomTitle
+      ? activeConversation.title
+      : isFirstMessage
+        ? text.trim().slice(0, 28)
+        : (activeConversation?.title || 'Consulta');
 
     const modelMsgId = `msg_${Date.now() + 1}`;
     const initialModelMsg: Message = {
@@ -503,26 +542,98 @@ ${activeConversation.messages
 
         <div className="sidebar-content">
           <div className="sidebar-section-label">Histórico de Análises</div>
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={`conversation-item ${conv.id === activeConversationId ? 'active' : ''}`}
-              onClick={() => setActiveConversationId(conv.id)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                <MessageSquare size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
-                <span className="conversation-title">{conv.title || 'Consulta'}</span>
-              </div>
-              <button
-                type="button"
-                className="conversation-delete"
-                onClick={(e) => deleteConversation(conv.id, e)}
-                title="Excluir"
+          {conversations.map((conv) => {
+            const isEditing = editingConvId === conv.id;
+            return (
+              <div
+                key={conv.id}
+                className={`conversation-item ${conv.id === activeConversationId ? 'active' : ''}`}
+                onClick={() => {
+                  if (!isEditing) setActiveConversationId(conv.id);
+                }}
               >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
+                {isEditing ? (
+                  <form
+                    className="conversation-edit-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      saveConversationTitle(conv.id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      ref={editInputRef}
+                      type="text"
+                      className="conversation-title-input"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
+                          cancelEditingConversation();
+                        }
+                      }}
+                      onBlur={() => saveConversationTitle(conv.id)}
+                      maxLength={60}
+                    />
+                    <div className="conversation-edit-actions">
+                      <button
+                        type="button"
+                        className="conversation-action-btn confirm"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          saveConversationTitle(conv.id);
+                        }}
+                        title="Salvar"
+                      >
+                        <Check size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className="conversation-action-btn cancel"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          cancelEditingConversation();
+                        }}
+                        title="Cancelar"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <div
+                      className="conversation-title-wrap"
+                      onDoubleClick={(e) => startEditingConversation(conv.id, conv.title, e)}
+                      title="Clique duas vezes para renomear"
+                    >
+                      <MessageSquare size={13} style={{ flexShrink: 0, opacity: 0.7 }} />
+                      <span className="conversation-title">{conv.title || 'Consulta'}</span>
+                    </div>
+                    <div className="conversation-actions">
+                      <button
+                        type="button"
+                        className="conversation-action-btn"
+                        onClick={(e) => startEditingConversation(conv.id, conv.title, e)}
+                        title="Renomear conversa"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        className="conversation-action-btn delete"
+                        onClick={(e) => deleteConversation(conv.id, e)}
+                        title="Excluir"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="sidebar-footer">
@@ -561,9 +672,58 @@ ${activeConversation.messages
                   <div className="topbar-divider"></div>
                 </>
               )}
-              <span className="topbar-title">
-                {activeConversation?.messages.length ? (activeConversation.title || 'Economista de Compras') : 'Economista de Compras'}
-              </span>
+              {activeConversation && (
+                <div className="topbar-title-container">
+                  {editingConvId === activeConversation.id ? (
+                    <form
+                      className="topbar-title-form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        saveConversationTitle(activeConversation.id);
+                      }}
+                    >
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        className="topbar-title-input"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            cancelEditingConversation();
+                          }
+                        }}
+                        onBlur={() => saveConversationTitle(activeConversation.id)}
+                        maxLength={60}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="topbar-title-btn"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          saveConversationTitle(activeConversation.id);
+                        }}
+                        title="Salvar"
+                      >
+                        <Check size={12} />
+                      </button>
+                    </form>
+                  ) : (
+                    <div
+                      className="topbar-title-clickable"
+                      onClick={(e) => startEditingConversation(activeConversation.id, activeConversation.title, e)}
+                      title="Clique para renomear este chat"
+                    >
+                      <span className="topbar-title">
+                        {activeConversation.messages.length ? (activeConversation.title || 'Economista de Compras') : 'Economista de Compras'}
+                      </span>
+                      <Pencil size={12} className="topbar-title-edit-icon" />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
