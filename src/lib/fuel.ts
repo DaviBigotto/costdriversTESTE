@@ -127,6 +127,6 @@ export function formatFuelContextForPrompt(report: FuelPriceReport): string {
     `- **Composição Oficial do Preço na Bomba (Petrobras):** Parcela Petrobras Refinaria: R$ 3,15 (42,8%) | Distribuição e Revenda: R$ 2,22 (30,2%) | Imposto Estadual (ICMS): R$ 1,17 (15,9%) | Biodiesel: R$ 0,82 (11,1%) = **Total: R$ ${d.averagePrice.toFixed(2)}/L**`,
     `- **Médias Regionais Chave:** SP: R$ ${report.regionalDiesel.SP.averagePrice.toFixed(2)}/L | PR: R$ ${report.regionalDiesel.PR.averagePrice.toFixed(2)}/L | MG: R$ ${report.regionalDiesel.MG.averagePrice.toFixed(2)}/L | RJ: R$ ${report.regionalDiesel.RJ.averagePrice.toFixed(2)}/L`,
     `- **Regra de Negociação de Frete (ANTT / Should-Cost):** O diesel representa historicamente cerca de 35% a 45% do custo do frete rodoviário. O gatilho de reajuste automático legal da ANTT é ativado quando a variação acumulada do diesel supera ±5%.`,
-    'REGRA OBRIGATÓRIA: Utilize os dados acima (R$ 7,36/L e decomposição oficial da Petrobras) para responder cotações de diesel e auditar reajustes de frete e sacolas da Plurix. Cite explicitamente a fonte oficial precos.petrobras.com.br/precos-diesel.',
+    'DIRETRIZ DE PESQUISA EM TEMPO REAL: Os dados acima servem como referencial metodológico da composição do frete. Para cotações vigentes, reajustes recentes nas refinarias ou no preço médio do diesel na bomba, pesquise via Google Search as publicações oficiais mais recentes da ANP e da Petrobras.',
   ].join('\n');
 }

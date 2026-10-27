@@ -21,14 +21,14 @@ export const COST_BREAKDOWN_LIBRARY: CategoryComposition[] = [
     category: 'Sacolas plásticas (PEAD/PEBD)',
     keywords: ['sacola', 'sacolinha', 'pead', 'pebd', 'polietileno', 'sacolas'],
     components: [
-      { name: 'Resina PEAD', weightRange: '55–65%', defaultWeight: 60, driver: 'Preço PE Braskem/ICIS, Brent e nafta em US$ (variação ~+30% em R$)', driverSource: 'Braskem / PlásticoNews / SIMPEP' },
-      { name: 'Overhead e margem', weightRange: '12–15%', defaultWeight: 14, driver: 'Fixo (sem driver de mercado que justifique alta, 0,0 p.p.)', driverSource: 'Premissa de modelagem' },
-      { name: 'Mão de obra', weightRange: '8–10%', defaultWeight: 9, driver: 'INPC / Dissídio transformação plástica (+4,0%)', driverSource: 'IBGE / Sindicato' },
-      { name: 'Energia elétrica', weightRange: '6–8%', defaultWeight: 7, driver: 'Tarifa industrial Copel/concessionárias alta tensão (+21,9%)', driverSource: 'ANEEL / Copel' },
-      { name: 'Aditivos e pigmentos', weightRange: '4–6%', defaultWeight: 5, driver: 'IPCA proxy (+4,2%)', driverSource: 'IBGE' },
-      { name: 'Frete e distribuição', weightRange: '4–6%', defaultWeight: 5, driver: 'Diesel S10 ANP (+20,5%)', driverSource: 'ANP' },
+      { name: 'Resina PEAD', weightRange: '55–65%', defaultWeight: 60, driver: 'Preço internacional PEAD, paridade de importação, cotação Brent/nafta e câmbio USD/BRL', driverSource: 'Braskem / ICIS / SIMPEP' },
+      { name: 'Overhead e margem', weightRange: '12–15%', defaultWeight: 14, driver: 'Custos fixos e margem do transformador (sem driver de mercado que justifique repasse de alta, 0,0 p.p.)', driverSource: 'Premissa de modelagem' },
+      { name: 'Mão de obra', weightRange: '8–10%', defaultWeight: 9, driver: 'INPC e Convenção Coletiva de Trabalho (CCT) do setor de transformação plástica', driverSource: 'IBGE / Sindicato' },
+      { name: 'Energia elétrica', weightRange: '6–8%', defaultWeight: 7, driver: 'Tarifas industriais de alta tensão reguladas e encargos setoriais vigentes', driverSource: 'ANEEL / Concessionárias' },
+      { name: 'Aditivos e pigmentos', weightRange: '4–6%', defaultWeight: 5, driver: 'Insumos químicos auxiliares e proxy IPCA', driverSource: 'IBGE' },
+      { name: 'Frete e distribuição', weightRange: '4–6%', defaultWeight: 5, driver: 'Preço médio do diesel S10 na bomba e frete rodoviário', driverSource: 'ANP / ANTT' },
     ],
-    notes: 'A resina representa 60% do custo da sacolinha. Sua alta de ~30% em R$ (impulsionada pelo Brent a US$ 104 e reajustes Braskem de +R$ 8.000/t) explica 18,0 dos 21,1 p.p. do reajuste total. Energia (+1,5 p.p.), frete (+1,0 p.p.), mão de obra (+0,4 p.p.) e aditivos (+0,2 p.p.) somam 3,1 p.p., totalizando 21,1% de Should-Cost justo. Pedidos de 28% possuem 6,9 p.p. sem lastro em custo. A projeção de 12 meses aponta custo estável/em recuo de -2,0% com o Brent voltando para a faixa de US$ 90.',
+    notes: 'A resina virgem representa aproximadamente 60% do custo final da sacola plástica. Para auditar pedidos de reajuste, calcule a contribuição de cada driver (peso % x variação real do período pesquisada no mercado). Custos fixos e margem não possuem lastro em custos para sofrerem reajuste (0,0 p.p.). Pesquise via Google Search as variações recentes da resina, do petróleo e a cotação do dólar para embasar o Should-Cost.',
   },
   {
     category: 'Filmes, bandejas e embalagens plásticas',
@@ -261,10 +261,11 @@ Para qualquer análise de custo, reajuste ou categoria (via chat, /reajuste, /an
 - ESTRATÉGIA PRONTA PARA A MESA: Sempre que houver pedido de reajuste ou análise de fornecedor, declare as 4 balizas de mesa (Abertura, Meta, Teto, Gatilho), a cláusula paramétrica matemática para contrato e o roleplay de objeções com respostas técnicas.
 - AUSÊNCIA DE BANDEIRAS: Mantenha todas as análises focadas no nível corporativo consolidado da "rede Plurix", sem citar nomes específicos de bandeiras de supermercado.
 
-# COTAÇÕES EM TEMPO REAL E HIERARQUIA DE DADOS PRIMÁRIOS
-- DADOS AO VIVO CONECTADOS VIA API: O sistema injeta cotações oficiais e atualizadas de Câmbio (AwesomeAPI / B3), Inflação (IPCA/INPC do IBGE SIDRA), Juros (Selic/CDI Bacen) e Combustíveis (Diesel S10 ANP). Utilize SEMPRE estes números exatos em tempo real.
-- BLINDAGEM CONTRA ALUCINAÇÕES E BLOGS DESATUALIZADOS: É estritamente proibido inventar valores ou citar notícias soltas de blogs sem data e sem fonte. Sempre que citar commodities internacionais (Brent, resinas de polietileno, celulose, papel kraft), use paridades técnicas claras (dólar da API x cotação internacional) e reporte como estimativa técnica fundamentada.
-- FONTES SETORIAIS OFICIAIS: Utilize como referências oficiais setoriais as entidades legítimas (ABIPLAST para plásticos, Empapel para papelão ondulado, ComexStat/MDIC para dados de importação, ANEEL para energia elétrica, ANP para fretes, IBGE para salários e inflação).
+# PESQUISA EM TEMPO REAL E HIERARQUIA DE DADOS PRIMÁRIOS
+- PESQUISA ATIVA NA WEB (GOOGLE SEARCH): Você possui a ferramenta de busca Google Search conectada e DEVE pesquisar ativamente na web sempre que a pergunta envolver cotações atuais, notícias de mercado, commodities (petróleo Brent, resinas de polietileno PEAD/PEBD, papelão ondulado, celulose), dissídios e reajustes anunciados por fornecedores.
+- DADOS AO VIVO CONECTADOS VIA API: O sistema injeta dados oficiais de Câmbio em tempo real (AwesomeAPI) e índices do IBGE SIDRA/Bacen quando disponíveis. Utilize esses números como baliza matemática.
+- NUNCA ASSUMA NÚMEROS CONGELADOS OU PREMISSAS PASSADAS: Toda resposta deve refletir o momento atual e a evidência pública verificada. Calcule a cascata de Should-Cost (peso % x variação %) usando os dados pesquisados para responder ao comprador com máximo rigor econômico.
+- FONTES SETORIAIS OFICIAIS: Utilize como referências oficiais setoriais as entidades legítimas (ABIPLAST para plásticos, Empapel para papelão ondulado, ComexStat/MDIC para importação, ANEEL para energia elétrica, ANP para fretes, IBGE para salários e inflação).
 
 # COMANDOS SUPORTADOS
 - /analise [item]: Estudo completo de mercado, cost drivers e estrutura da cadeia.

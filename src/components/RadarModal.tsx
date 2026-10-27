@@ -77,19 +77,19 @@ export function RadarModal({ isOpen, onClose, onInsertIntoChat }: RadarModalProp
 Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'}
 
 1. CÂMBIO COMERCIAL (AwesomeAPI / Mercado Financeiro):
-- Dólar Comercial (USD): R$ ${usd ? usd.bid.toFixed(4) : '5.0552'} (${usd && usd.pctChange >= 0 ? '+' : ''}${usd ? usd.pctChange.toFixed(2) : '-0.18'}%)
-- Euro Comercial (EUR): R$ ${eur ? eur.bid.toFixed(4) : '5.6728'} (${eur && eur.pctChange >= 0 ? '+' : ''}${eur ? eur.pctChange.toFixed(2) : '-0.40'}%)
+- Dólar Comercial (USD): ${usd ? `R$ ${usd.bid.toFixed(4)} (${usd.pctChange >= 0 ? '+' : ''}${usd.pctChange.toFixed(2)}%)` : 'Consultando...'}
+- Euro Comercial (EUR): ${eur ? `R$ ${eur.bid.toFixed(4)} (${eur.pctChange >= 0 ? '+' : ''}${eur.pctChange.toFixed(2)}%)` : 'Consultando...'}
 
 2. INFLAÇÃO OFICIAL (IBGE):
-- IPCA (12 meses): ${ipca ? `${ipca.accumulated12m}%` : '4.58%'} | Mês: ${ipca && (ipca.monthlyVariation || 0) >= 0 ? '+' : ''}${ipca?.monthlyVariation || 0.82}% (Ref: ${ipca?.referencePeriod || '09/2026'})
-- INPC (12 meses - Dissídios & Serviços): ${inpc ? `${inpc.accumulated12m}%` : '4.29%'} | Mês: ${inpc && (inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc?.monthlyVariation || 0.82}%
+- IPCA (12 meses): ${ipca ? `${ipca.accumulated12m}%` : 'Consultando...'} | Mês: ${ipca ? `${(ipca.monthlyVariation || 0) >= 0 ? '+' : ''}${ipca.monthlyVariation || 0}% (Ref: ${ipca.referencePeriod})` : '—'}
+- INPC (12 meses - Dissídios & Serviços): ${inpc ? `${inpc.accumulated12m}%` : 'Consultando...'} | Mês: ${inpc ? `${(inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc.monthlyVariation || 0}%` : '—'}
 
 3. JUROS & CAPITAL (Banco Central / B3):
-- Taxa Selic Meta: ${selic ? `${selic.annualRate}% a.a.` : '13.75% a.a.'}
-- Taxa CDI: ${cdi ? `${cdi.annualRate}% a.a.` : '13.65% a.a.'}
+- Taxa Selic Meta: ${selic ? `${selic.annualRate}% a.a.` : 'Consultando...'}
+- Taxa CDI: ${cdi ? `${cdi.annualRate}% a.a.` : 'Consultando...'}
 
 4. COMBUSTÍVEIS & FRETE (Petrobras / ANP):
-- Diesel S10 (Média Brasil na Bomba): R$ ${diesel ? diesel.averagePrice.toFixed(2) : '7.36'}/L (SP: R$ ${fuel?.regionalDiesel?.SP?.averagePrice.toFixed(2) || '7.24'}/L)`;
+- Diesel S10 (Média Brasil na Bomba): ${diesel ? `R$ ${diesel.averagePrice.toFixed(2)}/L` : 'Consultando...'} ${fuel?.regionalDiesel?.SP ? `(SP: R$ ${fuel.regionalDiesel.SP.averagePrice.toFixed(2)}/L)` : ''}`;
 
     navigator.clipboard.writeText(summary);
     setCopied(true);
@@ -110,13 +110,13 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
 
 | Indicador | Cotação / Valor | Variação Período | Referência | Fonte Oficial |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dólar Comercial (USD/BRL)** | R$ ${usd ? usd.bid.toFixed(4) : '5.0552'} | ${usd && usd.pctChange >= 0 ? '+' : ''}${usd ? usd.pctChange.toFixed(2) : '-0.18'}% | Tempo Real | AwesomeAPI / Mercado Financeiro |
-| **Euro Comercial (EUR/BRL)** | R$ ${eur ? eur.bid.toFixed(4) : '5.6728'} | ${eur && eur.pctChange >= 0 ? '+' : ''}${eur ? eur.pctChange.toFixed(2) : '-0.40'}% | Tempo Real | AwesomeAPI / Mercado Financeiro |
-| **IPCA (Inflação Geral)** | ${ipca ? `${ipca.accumulated12m}%` : '4.58%'} (12m) | ${ipca && (ipca.monthlyVariation || 0) >= 0 ? '+' : ''}${ipca?.monthlyVariation || 0.82}% no mês | ${ipca?.referencePeriod || '09/2026'} | IBGE |
-| **INPC (Dissídios & Serviços)** | ${inpc ? `${inpc.accumulated12m}%` : '4.29%'} (12m) | ${inpc && (inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc?.monthlyVariation || 0.82}% no mês | ${ipca?.referencePeriod || '09/2026'} | IBGE |
-| **Taxa Selic Meta** | ${selic ? `${selic.annualRate}% a.a.` : '13.75% a.a.'} | Estável | ${selic?.referencePeriod || '10/2026'} | Banco Central do Brasil |
-| **Taxa CDI** | ${cdi ? `${cdi.annualRate}% a.a.` : '13.65% a.a.'} | Estável | ${cdi?.referencePeriod || '10/2026'} | B3 |
-| **Diesel S10 (Frete & Logística)** | R$ ${diesel ? diesel.averagePrice.toFixed(2) : '7.36'}/L | ${diesel && diesel.weeklyVariationPercent >= 0 ? '+' : ''}${diesel ? diesel.weeklyVariationPercent.toFixed(2) : '+0.41'}% na semana | ${diesel?.period || 'Outubro/2026'} | Petrobras / ANP |
+| **Dólar Comercial (USD/BRL)** | ${usd ? `R$ ${usd.bid.toFixed(4)}` : 'Consultando...'} | ${usd ? `${usd.pctChange >= 0 ? '+' : ''}${usd.pctChange.toFixed(2)}%` : '—'} | Tempo Real | AwesomeAPI / Mercado Financeiro |
+| **Euro Comercial (EUR/BRL)** | ${eur ? `R$ ${eur.bid.toFixed(4)}` : 'Consultando...'} | ${eur ? `${eur.pctChange >= 0 ? '+' : ''}${eur.pctChange.toFixed(2)}%` : '—'} | Tempo Real | AwesomeAPI / Mercado Financeiro |
+| **IPCA (Inflação Geral)** | ${ipca ? `${ipca.accumulated12m}% (12m)` : '—'} | ${ipca ? `${(ipca.monthlyVariation || 0) >= 0 ? '+' : ''}${ipca.monthlyVariation || 0}% no mês` : '—'} | ${ipca?.referencePeriod || '—'} | IBGE |
+| **INPC (Dissídios & Serviços)** | ${inpc ? `${inpc.accumulated12m}% (12m)` : '—'} | ${inpc ? `${(inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc.monthlyVariation || 0}% no mês` : '—'} | ${inpc?.referencePeriod || '—'} | IBGE |
+| **Taxa Selic Meta** | ${selic ? `${selic.annualRate}% a.a.` : '—'} | Estável | ${selic?.referencePeriod || '—'} | Banco Central do Brasil |
+| **Taxa CDI** | ${cdi ? `${cdi.annualRate}% a.a.` : '—'} | Estável | ${cdi?.referencePeriod || '—'} | B3 |
+| **Diesel S10 (Frete & Logística)** | ${diesel ? `R$ ${diesel.averagePrice.toFixed(2)}/L` : '—'} | ${diesel ? `${diesel.weeklyVariationPercent >= 0 ? '+' : ''}${diesel.weeklyVariationPercent.toFixed(2)}% na semana` : '—'} | ${diesel?.period || '—'} | Petrobras / ANP |
 
 > **Orientação para o Comprador:** Utilize estes indicadores como premissas oficiais em análises de Should-Cost e negociações de reajuste com fornecedores.`;
 

@@ -23,29 +23,29 @@ export interface LiveCurrencyData {
   fetchedAt: number;
 }
 
-// Base de contingência oficial alinhada ao Radar de Mercado (caso a API externa oscile ou atinja timeout)
+// Base de contingência oficial alinhada ao mercado (caso a AwesomeAPI oscile ou atinja timeout)
 const DEFAULT_FALLBACK_RATES: LiveCurrencyData = {
   usd: {
     code: 'USD',
     name: 'Dólar Americano/Real Brasileiro',
-    bid: 5.0552,
-    ask: 5.0601,
-    high: 5.0645,
-    low: 5.0403,
-    pctChange: -0.18,
-    varBid: -0.009,
+    bid: 5.3554,
+    ask: 5.3571,
+    high: 5.4191,
+    low: 5.3531,
+    pctChange: -0.29,
+    varBid: -0.0158,
     rawDate: new Date().toISOString(),
     formattedDate: new Date().toLocaleString('pt-BR'),
   },
   eur: {
     code: 'EUR',
     name: 'Euro/Real Brasileiro',
-    bid: 5.6728,
-    ask: 5.6751,
-    high: 5.698,
-    low: 5.6586,
-    pctChange: -0.4,
-    varBid: -0.0228,
+    bid: 5.9812,
+    ask: 5.9832,
+    high: 6.0424,
+    low: 5.9812,
+    pctChange: -0.38,
+    varBid: -0.0232,
     rawDate: new Date().toISOString(),
     formattedDate: new Date().toLocaleString('pt-BR'),
   },
@@ -165,13 +165,13 @@ export function formatCurrencyContextForPrompt(currencyData: LiveCurrencyData | 
     );
   }
 
-  const usdBid = data.usd?.bid ? data.usd.bid.toFixed(4) : '5.0552';
-  parts.push(
-    `REGRA MANDATÓRIA E INEGOCIÁVEL DE ALINHAMENTO COM O RADAR DE MERCADO:
-1. O Radar Econômico de Mercado da Plurix está aberto na tela do comprador exibindo a cotação oficial do Dólar Comercial em R$ ${usdBid} (fonte AwesomeAPI).
-2. Você DEVE reportar rigorosamente este valor oficial de R$ ${usdBid} (faixa de R$ ${data.usd?.bid ? data.usd.bid.toFixed(2) : '5,06'}) sempre que falar sobre o dólar ou câmbio atual.
-3. É TERMINANTEMENTE PROIBIDO inventar valores da sua memória pré-treinada (como R$ 5,75, R$ 5,80) ou dizer que você não possui acesso em tempo real. Você POSSUI este dado conectado e oficial agora.`
-  );
+  if (data.usd?.bid) {
+    parts.push(
+      `DIRETRIZ DE CÂMBIO EM TEMPO REAL:
+- A cotação oficial em tempo real da AwesomeAPI é de R$ ${data.usd.bid.toFixed(4)} para o Dólar Comercial (USD/BRL).
+- Utilize esta cotação como base exata para o câmbio atual. Caso a análise envolva histórico cambial, fechamentos de meses anteriores ou projeções de mercado (como o Relatório Focus do Bacen), pesquise ativamente via Google Search.`
+    );
+  }
 
   return parts.join('\n');
 }

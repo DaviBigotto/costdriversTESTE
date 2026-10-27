@@ -101,18 +101,17 @@ export async function getCommoditiesReport(): Promise<CommodityReport> {
 }
 
 /**
- * Formata os dados de commodities para inclusão contextual nos prompts do modelo.
+ * Formata as diretrizes de commodities para inclusão contextual nos prompts do modelo.
  */
 export function formatCommoditiesContextForPrompt(report: CommodityReport): string {
-  return `### PAINEL OFICIAL DE COMMODITIES INDUSTRIAIS E INSUMOS PRIMÁRIOS (FONTES: ICE / REUTERS / BRASKEM / ANEEL / EMPAPEL):
-- **Petróleo Brent:** **US$ ${report.brent.currentValue.toFixed(2)}/barril** (${report.brent.reading} - Var. 12m: +${report.brent.variation12mPercent.toFixed(1)}%) [Fonte: ${report.brent.source}]. ${report.brent.notes}
-- **Resina PEAD (Polietileno):** **R$ ${report.resinaPead.currentValue.toLocaleString('pt-BR')}/t** (${report.resinaPead.reading} - Var. 12m em R$: **+${report.resinaPead.variation12mPercent.toFixed(1)}%**) [Fonte: ${report.resinaPead.source}]. ${report.resinaPead.notes}
-- **Energia Elétrica Alta Tensão:** ${report.energiaAltaTensao.reading} - Var. 12m: **+${report.energiaAltaTensao.variation12mPercent.toFixed(1)}%** [Fonte: ${report.energiaAltaTensao.source}].
-- **Papelão Ondulado / Aparas:** Var. 12m: **+${report.papelKraftAparas.variation12mPercent.toFixed(1)}%** [Fonte: ${report.papelKraftAparas.source}].
+  return `### DIRETRIZES DE COMMODITIES INDUSTRIAIS E INSUMOS PRIMÁRIOS:
+- **Petróleo Brent:** Insumo-base para nafta petroquímica, polietilenos, solventes e diesel.
+- **Resinas Plásticas (PEAD/PEBD/PP/PET):** Sensíveis à paridade de importação, câmbio USD/BRL e repasses dos produtores nacionais (Braskem) e globais (ICIS).
+- **Papelão Ondulado / Aparas / Celulose:** Acompanhar cotações da Empapel e IBÁ.
+- **Energia Elétrica Industrial:** Tarifas de alta tensão homologadas pela ANEEL e encargos setoriais (CDE, bandeiras tarifárias).
 
-REGRA ECONÔMICA DETERMINÍSTICA:
-Em produtos plásticos (sacolas, filmes, bandejas), a Resina PEAD/PEBD pesa ~60% do custo final e teve alta acumulada de ~30% em R$ devido aos choques do petróleo e da Braskem.
-A alta isolada da resina explica +18,0 p.p. no custo da sacola (60% x 30% = 18 p.p.). Somando energia (+1,5 p.p.), frete (+1,0 p.p.), mão de obra (+0,4 p.p.) e aditivos (+0,2 p.p.), o Reajuste Teórico Justo (Should-Cost) é de aproximadamente 21,1%!
-Contra um pedido hipotético de 28,0%, o espaço de negociação (gap sem lastro em custo) é de 6,9 p.p.
-A projeção para os próximos 12 meses aponta custo estável/em alívio (-2,0%) à medida que o petróleo recua de US$ 104 para US$ 90 (cenário base).`;
+DIRETRIZ DE PESQUISA EM TEMPO REAL:
+1. Você DEVE pesquisar ativamente via Google Search as cotações, notícias e variações recentes de qualquer commodity ou insumo industrial mencionado pelo usuário.
+2. Não utilize valores pré-concebidos ou congelados; busque dados recentes de fontes confiáveis (Reuters, ICE, ABIPLAST, Empapel, ANEEL, etc.) e utilize esses dados para embasar os cálculos de Should-Cost.`;
 }
+
