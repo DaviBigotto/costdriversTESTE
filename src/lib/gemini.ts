@@ -65,10 +65,10 @@ export function getGeminiModel(): string {
 function getModelFallbackList(preferredModel: string): string[] {
   const candidates = [
     preferredModel,
-    'gemini-3.5-flash',
-    'gemini-3.6-flash',
     'gemini-3-flash-preview',
     'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-3.6-flash',
   ];
   return Array.from(new Set(candidates.filter(Boolean)));
 }
@@ -440,9 +440,11 @@ export async function* streamEconomistResponse(
     };
   });
 
-  // 1ª Tentativa: Com Google Search Grounding em streaming em tempo real
+  // 1ª Tentativa: Com Google Search Grounding em streaming em tempo real (fail-fast ágil de 6.5s)
   let lastError: any = null;
-  for (const modelName of modelsToTry) {
+  for (const modelName of modelsToTry.slice(0, 2)) {
+    const controller = new AbortController();
+    const connectTimer = setTimeout(() => controller.abort(), 6500);
     try {
       const responseStream = await ai.models.generateContentStream({
         model: modelName,
@@ -451,6 +453,7 @@ export async function* streamEconomistResponse(
           systemInstruction: systemInstruction,
           temperature: 0.2,
           tools: [{ googleSearch: {} }],
+          abortSignal: controller.signal,
         },
       });
 
@@ -458,6 +461,7 @@ export async function* streamEconomistResponse(
       const finalSources = [...additionalSources];
 
       for await (const chunk of responseStream) {
+        clearTimeout(connectTimer);
         const token = chunk.text || '';
         if (token) {
           fullText += token;
@@ -478,45 +482,49 @@ export async function* streamEconomistResponse(
           }
         }
       }
+      clearTimeout(connectTimer);
 
-      if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
-        finalSources.push(getSectorSourceForCategory(matchedCategory.category));
-      }
+      if (fullText.trim()) {
+        if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
+          finalSources.push(getSectorSourceForCategory(matchedCategory.category));
+        }
 
-      let suggestedAction: any = undefined;
-      const isAnalyticalResponse =
-        fullText.length > 300 &&
-        (matchedCategory !== null ||
-          /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
+        let suggestedAction: any = undefined;
+        const isAnalyticalResponse =
+          fullText.length > 300 &&
+          (matchedCategory !== null ||
+            /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
 
-      if (isAnalyticalResponse) {
-        suggestedAction = {
-          type: 'generate_bulletin',
-          label: 'Gerar boletim deste tema',
-          topic: matchedCategory ? matchedCategory.category : lastUserMsg.slice(0, 60),
+        if (isAnalyticalResponse) {
+          suggestedAction = {
+            type: 'generate_bulletin',
+            label: 'Gerar boletim deste tema',
+            topic: matchedCategory ? matchedCategory.category : lastUserMsg.slice(0, 60),
+          };
+        }
+
+        yield {
+          type: 'done',
+          text: fullText,
+          sources: finalSources,
+          suggestedAction,
         };
+        return;
       }
-
-      yield {
-        type: 'done',
-        text: fullText,
-        sources: finalSources,
-        suggestedAction,
-      };
-      return;
     } catch (err: any) {
+      clearTimeout(connectTimer);
       lastError = err;
       if (err?.status === 429 || err?.message?.includes('RESOURCE_EXHAUSTED') || err?.message?.includes('quota')) {
-        break; // cota de search esgotada, vai para o fallback sem tools
+        break; // cota de search esgotada na chave, pula direto para o fallback sem tools
       }
-      if (err?.status === 503 || err?.status === 404) {
-        continue;
-      }
+      continue;
     }
   }
 
-  // 2ª Tentativa (Fallback Gracioso): Streaming direto sem Search Grounding caso a cota de tools tenha esgotado
+  // 2ª Tentativa (Fallback Gracioso Ágil): Streaming direto sem Search Grounding com fail-fast de 6.5s por modelo
   for (const modelName of modelsToTry) {
+    const controller = new AbortController();
+    const connectTimer = setTimeout(() => controller.abort(), 6500);
     try {
       const responseStream = await ai.models.generateContentStream({
         model: modelName,
@@ -524,55 +532,59 @@ export async function* streamEconomistResponse(
         config: {
           systemInstruction: systemInstruction,
           temperature: 0.2,
+          abortSignal: controller.signal,
         },
       });
 
       let fullText = '';
       for await (const chunk of responseStream) {
+        clearTimeout(connectTimer);
         const token = chunk.text || '';
         if (token) {
           fullText += token;
           yield { type: 'token', content: token };
         }
       }
+      clearTimeout(connectTimer);
 
-      const finalSources = [...additionalSources];
-      if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
-        finalSources.push(getSectorSourceForCategory(matchedCategory.category));
-      }
+      if (fullText.trim()) {
+        const finalSources = [...additionalSources];
+        if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
+          finalSources.push(getSectorSourceForCategory(matchedCategory.category));
+        }
 
-      let suggestedAction: any = undefined;
-      const isAnalyticalResponse =
-        fullText.length > 300 &&
-        (matchedCategory !== null ||
-          /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
+        let suggestedAction: any = undefined;
+        const isAnalyticalResponse =
+          fullText.length > 300 &&
+          (matchedCategory !== null ||
+            /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
 
-      if (isAnalyticalResponse) {
-        suggestedAction = {
-          type: 'generate_bulletin',
-          label: 'Gerar boletim deste tema',
-          topic: matchedCategory ? matchedCategory.category : lastUserMsg.slice(0, 60),
+        if (isAnalyticalResponse) {
+          suggestedAction = {
+            type: 'generate_bulletin',
+            label: 'Gerar boletim deste tema',
+            topic: matchedCategory ? matchedCategory.category : lastUserMsg.slice(0, 60),
+          };
+        }
+
+        yield {
+          type: 'done',
+          text: fullText,
+          sources: finalSources,
+          suggestedAction,
         };
+        return;
       }
-
-      yield {
-        type: 'done',
-        text: fullText,
-        sources: finalSources,
-        suggestedAction,
-      };
-      return;
     } catch (err: any) {
+      clearTimeout(connectTimer);
       lastError = err;
-      if (err?.status === 503 || err?.status === 404 || err?.status === 429) {
-        continue;
-      }
+      continue;
     }
   }
 
-  const errText = `> ⚠️ **Falha na comunicação:** Ocorreu um problema temporário de conexão com os servidores da Gemini API (${lastError?.message || 'Serviço indisponível'}). Por favor, tente novamente em instantes.`;
+  const errText = `> ⚠️ **Servidores Ocupados:** Os modelos de inteligência estão em fila de espera nos servidores do Google (${lastError?.message || 'Serviço temporariamente indisponível'}). Por favor, envie sua mensagem novamente em alguns instantes.`;
   yield { type: 'token', content: errText };
-  yield { type: 'done', text: errText, sources: [], suggestedAction: undefined };
+  yield { type: 'done', text: errText, sources: additionalSources, suggestedAction: undefined };
 }
 
 function processGeminiSuccess(

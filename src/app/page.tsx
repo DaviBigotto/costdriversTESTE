@@ -864,12 +864,16 @@ ${activeConversation.messages
                     <div className="model-content-markdown">
                       {msg.content ? (
                         <MarkdownRenderer content={msg.content} />
-                      ) : (
+                      ) : isLoading ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--muted)', fontSize: '13px', padding: '4px 0' }}>
                           <span>Analisando cost drivers e dados de mercado</span>
                           <span className="typing-dot"></span>
                           <span className="typing-dot"></span>
                           <span className="typing-dot"></span>
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--muted)', fontSize: '13px', fontStyle: 'italic', padding: '4px 0' }}>
+                          Não foi possível carregar a resposta. Por favor, reenvie sua pergunta.
                         </div>
                       )}
                     </div>
