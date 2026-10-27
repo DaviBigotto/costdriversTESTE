@@ -175,13 +175,9 @@ export async function generateEconomistResponse(
   const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
   const [liveRates, panel, fuelReport, commoditiesReport] = await Promise.all([
-    isCurrencyRelevant ? getLiveCurrencyRates() : Promise.resolve(null),
-    isIndicatorsRelevantQuery(topicToExamine) || isIndicatorsRelevantQuery(allUserText)
-      ? getMacroeconomicPanel()
-      : Promise.resolve(null),
-    isFuelRelevantQuery(topicToExamine) || isFuelRelevantQuery(allUserText)
-      ? getFuelPriceReport()
-      : Promise.resolve(null),
+    getLiveCurrencyRates(),
+    getMacroeconomicPanel(),
+    getFuelPriceReport(),
     getCommoditiesReport(),
   ]);
 
@@ -365,13 +361,9 @@ export async function* streamEconomistResponse(
 
   // Busca paralela ultra-rápida de indicadores e commodities industriais
   const [liveRates, panel, fuelReport, commoditiesReport] = await Promise.all([
-    isCurrencyRelevant ? getLiveCurrencyRates() : Promise.resolve(null),
-    isIndicatorsRelevantQuery(topicToExamine) || isIndicatorsRelevantQuery(allUserText)
-      ? getMacroeconomicPanel()
-      : Promise.resolve(null),
-    isFuelRelevantQuery(topicToExamine) || isFuelRelevantQuery(allUserText)
-      ? getFuelPriceReport()
-      : Promise.resolve(null),
+    getLiveCurrencyRates(),
+    getMacroeconomicPanel(),
+    getFuelPriceReport(),
     getCommoditiesReport(),
   ]);
 
