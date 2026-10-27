@@ -74,74 +74,55 @@ function getModelFallbackList(preferredModel: string): string[] {
 }
 
 /**
- * Mapeia cada categoria da biblioteca de Cost Drivers para a entidade oficial ou regulatória legítima do setor.
+ * Filtra as fontes para exibir APENAS o que foi efetivamente citado ou pesquisado na resposta.
+ * Elimina links genéricos, institucionais estáticos ou índices não mencionados.
  */
-function getSectorSourceForCategory(categoryName: string): GroundingSource {
-  const sourcesMap: Record<string, GroundingSource> = {
-    'Sacolas plásticas (PEAD/PEBD)': {
-      title: 'ABIPLAST — Associação Brasileira da Indústria do Plástico',
-      url: 'https://www.abiplast.org.br/',
-    },
-    'Filmes, bandejas e embalagens plásticas': {
-      title: 'ABIPLAST / Plastivida — Transformação e Embalagens Plásticas',
-      url: 'https://www.abiplast.org.br/',
-    },
-    'Embalagens de papel/papelão': {
-      title: 'Empapel — Associação Brasileira de Embalagens em Papel',
-      url: 'https://empapel.org.br/',
-    },
-    'Bobinas térmicas e etiquetas': {
-      title: 'ComexStat / MDIC — Estatísticas Oficiais de Importação de Papel Térmico',
-      url: 'https://comexstat.mdic.gov.br/',
-    },
-    'Material de limpeza e higiene': {
-      title: 'ABIPLA — Associação Brasileira das Indústrias de Produtos de Higiene e Limpeza',
-      url: 'https://abipla.org.br/',
-    },
-    'Limpeza e conservação terceirizada': {
-      title: 'IBGE — SIDRA (INPC e Dissídios Coletivos de Trabalho)',
-      url: 'https://sidra.ibge.gov.br/',
-    },
-    'Segurança e vigilância': {
-      title: 'MTE / FENAVIST — Convenção Coletiva dos Vigilantes e Adicional de Periculosidade',
-      url: 'https://fenavist.org.br/',
-    },
-    'Manutenção predial e refrigeração': {
-      title: 'ABRAVA — Associação Brasileira de Refrigeração, Ar Condicionado e Ventilação',
-      url: 'https://abrava.com.br/',
-    },
-    'Energia elétrica': {
-      title: 'CCEE / ANEEL — Preço de Liquidação das Diferenças (PLD) e Tarifas Reguladas',
-      url: 'https://www.ccee.org.br/',
-    },
-    'Uniformes e EPI': {
-      title: 'ABIT / ANIMASEG — Associação Brasileira da Indústria Têxtil e Setor de EPIs',
-      url: 'https://www.abit.org.br/',
-    },
-    'Frete e logística rodoviária': {
-      title: 'Petrobras — Preços dos Combustíveis e Composição (Diesel S10 na Bomba)',
-      url: 'https://precos.petrobras.com.br/precos-diesel',
-    },
-    'TI e telecom': {
-      title: 'Banco Central do Brasil — Câmbio PTAX Oficial',
-      url: 'https://www.bcb.gov.br/estabilidadefinanceira/historicocotacoes',
-    },
-    'Gráfica e material de PDV': {
-      title: 'ABIGRAF — Associação Brasileira da Indústria Gráfica',
-      url: 'https://abigraf.org.br/',
-    },
-    'Paletes de madeira e movimentação': {
-      title: 'IBÁ / CEPEA — Indústria Brasileira de Árvores e Cotações Florestais',
-      url: 'https://iba.org/',
-    },
-  };
+function filterRelevantSources(
+  sources: GroundingSource[],
+  responseText: string,
+  userQuery: string
+): GroundingSource[] {
+  const combined = (responseText + ' ' + userQuery).toLowerCase();
 
-  return (
-    sourcesMap[categoryName] || {
-      title: `Referencial Setorial Plurix: ${categoryName}`,
-      url: 'https://sidra.ibge.gov.br/',
+  return sources.filter((s) => {
+    // Links reais encontrados pela ferramenta de busca do Google (groundingChunks): mantém sempre
+    if (
+      !s.url.includes('awesomeapi.com.br') &&
+      !s.url.includes('ibge.gov.br') &&
+      !s.url.includes('dadosabertos.bcb.gov.br') &&
+      !s.url.includes('bcb.gov.br') &&
+      !s.url.includes('precos.petrobras.com.br')
+    ) {
+      return true;
     }
-  );
+
+    // Câmbio AwesomeAPI: só se falar de dólar, câmbio, ptax, moeda americana ou moeda estrangeira
+    if (s.url.includes('awesomeapi') && /d[oó]lar|c[aâ]mbio|ptax|usd|moeda/i.test(combined)) {
+      return true;
+    }
+
+    // IPCA (IBGE): só se falar de ipca ou inflação
+    if (s.url.includes('ipca') && /ipca|infla[cç][aã]o/i.test(combined)) {
+      return true;
+    }
+
+    // INPC (IBGE): só se falar de inpc, dissídio, convenção coletiva, cct ou mão de obra
+    if (s.url.includes('inpc') && /inpc|diss[ií]dio|cct|m[aã]o de obra|sal[aá]rio/i.test(combined)) {
+      return true;
+    }
+
+    // Selic: só se falar de juros, selic, copom
+    if (s.url.includes('selic') && /selic|juros|copom/i.test(combined)) {
+      return true;
+    }
+
+    // Diesel (Petrobras): só se falar de diesel, combustível ou frete rodoviário
+    if (s.url.includes('precos-diesel') && /diesel|combust[ií]vel|frete|transporte/i.test(combined)) {
+      return true;
+    }
+
+    return false;
+  });
 }
 
 /**
@@ -287,15 +268,9 @@ export async function generateEconomistResponse(
       });
 
       const processed = processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
-      // Adiciona a entidade regulatória ou setorial oficial correspondente à categoria
-      const finalSources = [...processed.sources];
-      if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
-        finalSources.push(getSectorSourceForCategory(matchedCategory.category));
-      }
-
       return {
         ...processed,
-        sources: finalSources,
+        sources: filterRelevantSources(processed.sources, processed.text, lastUserMsg),
       };
     } catch (err: any) {
       lastError = err;
@@ -477,9 +452,7 @@ export async function* streamEconomistResponse(
       clearTimeout(connectTimer);
 
       if (fullText.trim()) {
-        if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
-          finalSources.push(getSectorSourceForCategory(matchedCategory.category));
-        }
+        const relevantSources = filterRelevantSources(finalSources, fullText, lastUserMsg);
 
         let suggestedAction: any = undefined;
         const isAnalyticalResponse =
@@ -498,7 +471,7 @@ export async function* streamEconomistResponse(
         yield {
           type: 'done',
           text: fullText,
-          sources: finalSources,
+          sources: relevantSources,
           suggestedAction,
         };
         return;
@@ -540,10 +513,7 @@ export async function* streamEconomistResponse(
       clearTimeout(connectTimer);
 
       if (fullText.trim()) {
-        const finalSources = [...additionalSources];
-        if (matchedCategory && !finalSources.some((s) => s.title.includes(matchedCategory.category))) {
-          finalSources.push(getSectorSourceForCategory(matchedCategory.category));
-        }
+        const relevantSources = filterRelevantSources(additionalSources, fullText, lastUserMsg);
 
         let suggestedAction: any = undefined;
         const isAnalyticalResponse =
@@ -562,7 +532,7 @@ export async function* streamEconomistResponse(
         yield {
           type: 'done',
           text: fullText,
-          sources: finalSources,
+          sources: relevantSources,
           suggestedAction,
         };
         return;
@@ -630,7 +600,7 @@ function processGeminiSuccess(
 
   return {
     text: responseText,
-    sources,
+    sources: filterRelevantSources(sources, responseText, lastUserMsg),
     searchQueries,
     suggestedAction,
   };

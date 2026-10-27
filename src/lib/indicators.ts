@@ -134,7 +134,7 @@ async function fetchInterestRates(): Promise<{ selic?: EconomicIndicator; cdi?: 
           annualRate: selicItem.valor,
           referencePeriod: today,
           source: 'Banco Central do Brasil (COPOM)',
-          sourceUrl: 'https://www.bcb.gov.br/controleinflacao/taxaselic',
+          sourceUrl: 'https://dadosabertos.bcb.gov.br/dataset/11-taxa-de-juros---selic',
         };
       }
 
