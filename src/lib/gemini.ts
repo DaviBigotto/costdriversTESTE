@@ -15,10 +15,6 @@ import {
   isFuelRelevantQuery,
   formatFuelContextForPrompt,
 } from './fuel';
-import {
-  getCommoditiesReport,
-  formatCommoditiesContextForPrompt,
-} from './commodities';
 
 export interface GroundingSource {
   title: string;
@@ -155,11 +151,10 @@ export async function generateEconomistResponse(
   const matchedCategory = findCategoryReference(topicToExamine);
   const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
-  const [liveRates, panel, fuelReport, commoditiesReport] = await Promise.all([
+  const [liveRates, panel, fuelReport] = await Promise.all([
     getLiveCurrencyRates(),
     getMacroeconomicPanel(),
     getFuelPriceReport(),
-    getCommoditiesReport(),
   ]);
 
   let currencyContext = '';
@@ -205,8 +200,7 @@ export async function generateEconomistResponse(
     });
   }
 
-  const commoditiesContext = formatCommoditiesContextForPrompt(commoditiesReport);
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext, commoditiesContext].filter(Boolean).join('\n\n');
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
@@ -334,12 +328,11 @@ export async function* streamEconomistResponse(
   const matchedCategory = findCategoryReference(topicToExamine);
   const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
 
-  // Busca paralela ultra-rápida de indicadores e commodities industriais
-  const [liveRates, panel, fuelReport, commoditiesReport] = await Promise.all([
+  // Busca paralela ultra-rápida de indicadores
+  const [liveRates, panel, fuelReport] = await Promise.all([
     getLiveCurrencyRates(),
     getMacroeconomicPanel(),
     getFuelPriceReport(),
-    getCommoditiesReport(),
   ]);
 
   let currencyContext = '';
@@ -385,8 +378,7 @@ export async function* streamEconomistResponse(
     });
   }
 
-  const commoditiesContext = formatCommoditiesContextForPrompt(commoditiesReport);
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext, commoditiesContext].filter(Boolean).join('\n\n');
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
@@ -674,10 +666,7 @@ export async function generateBulletinContent(
     });
   }
 
-  const commoditiesReport = await getCommoditiesReport();
-  const commoditiesContext = formatCommoditiesContextForPrompt(commoditiesReport);
-
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext, commoditiesContext].filter(Boolean).join('\n\n');
+  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const categoryContextHint = matchedCategory
