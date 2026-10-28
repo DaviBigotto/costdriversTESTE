@@ -73,11 +73,16 @@ export function RadarModal({ isOpen, onClose, onInsertIntoChat }: RadarModalProp
     const cdi = indicators?.cdi;
     const diesel = fuel?.dieselS10Brasil;
 
+    const usdTrend = currency?.usdTrend;
+    const usdTrendStr = usdTrend
+      ? ` | 15d: R$ ${usdTrend.rate15DaysAgo.toFixed(2)} (${usdTrend.variation15DaysPct >= 0 ? '+' : ''}${usdTrend.variation15DaysPct.toFixed(1)}% · Pico: R$ ${usdTrend.recentHigh.value.toFixed(2)})`
+      : '';
+
     const summary = `📊 Radar Econômico de Mercado — Plurix Compras Indiretas
 Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'}
 
 1. CÂMBIO COMERCIAL (AwesomeAPI / Mercado Financeiro):
-- Dólar Comercial (USD): ${usd ? `R$ ${usd.bid.toFixed(4)} (${usd.pctChange >= 0 ? '+' : ''}${usd.pctChange.toFixed(2)}%)` : 'Consultando...'}
+- Dólar Comercial (USD): ${usd ? `R$ ${usd.bid.toFixed(4)} (${usd.pctChange >= 0 ? '+' : ''}${usd.pctChange.toFixed(2)}% dia${usdTrendStr})` : 'Consultando...'}
 - Euro Comercial (EUR): ${eur ? `R$ ${eur.bid.toFixed(4)} (${eur.pctChange >= 0 ? '+' : ''}${eur.pctChange.toFixed(2)}%)` : 'Consultando...'}
 
 2. INFLAÇÃO OFICIAL (IBGE):
@@ -110,10 +115,10 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
 
 | Indicador | Cotação / Valor | Variação Período | Referência | Fonte Oficial |
 | :--- | :--- | :--- | :--- | :--- |
-| **Dólar Comercial (USD/BRL)** | ${usd ? `R$ ${usd.bid.toFixed(4)}` : 'Consultando...'} | ${usd ? `${usd.pctChange >= 0 ? '+' : ''}${usd.pctChange.toFixed(2)}%` : '—'} | Tempo Real | AwesomeAPI / Mercado Financeiro |
-| **Euro Comercial (EUR/BRL)** | ${eur ? `R$ ${eur.bid.toFixed(4)}` : 'Consultando...'} | ${eur ? `${eur.pctChange >= 0 ? '+' : ''}${eur.pctChange.toFixed(2)}%` : '—'} | Tempo Real | AwesomeAPI / Mercado Financeiro |
+| **Dólar Comercial (USD/BRL)** | ${usd ? `R$ ${usd.bid.toFixed(4)}` : 'Consultando...'} | ${usd ? `${usd.pctChange >= 0 ? '+' : ''}${usd.pctChange.toFixed(2)}% dia${currency?.usdTrend ? ` (${currency.usdTrend.variation15DaysPct >= 0 ? '+' : ''}${currency.usdTrend.variation15DaysPct.toFixed(1)}% 15d)` : ''}` : '—'} | Tempo Real + 15d | AwesomeAPI / Mercado Financeiro |
+| **Euro Comercial (EUR/BRL)** | ${eur ? `R$ ${eur.bid.toFixed(4)}` : 'Consultando...'} | ${eur ? `${eur.pctChange >= 0 ? '+' : ''}${eur.pctChange.toFixed(2)}% dia` : '—'} | Tempo Real | AwesomeAPI / Mercado Financeiro |
 | **IPCA (Inflação Geral)** | ${ipca ? `${ipca.accumulated12m}% (12m)` : '—'} | ${ipca ? `${(ipca.monthlyVariation || 0) >= 0 ? '+' : ''}${ipca.monthlyVariation || 0}% no mês` : '—'} | ${ipca?.referencePeriod || '—'} | IBGE |
-| **INPC (Dissídios & Serviços)** | ${inpc ? `${inpc.accumulated12m}% (12m)` : '—'} | ${inpc ? `${(inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc.monthlyVariation || 0}% no mês` : '—'} | ${inpc?.referencePeriod || '—'} | IBGE |
+| **INPC (Dissídios & Serviços)** | ${inpc ? `${inpc.accumulated12m}% (12m)` : '—'} | ${inpc ? `${(inpc.monthlyVariation || 0) >= 0 ? '+' : ''}${inpc.monthlyVariation || 0}% no mês` : '—'} | ${ipca?.referencePeriod || '—'} | IBGE |
 | **Taxa Selic Meta** | ${selic ? `${selic.annualRate}% a.a.` : '—'} | Estável | ${selic?.referencePeriod || '—'} | Banco Central do Brasil |
 | **Taxa CDI** | ${cdi ? `${cdi.annualRate}% a.a.` : '—'} | Estável | ${cdi?.referencePeriod || '—'} | B3 |
 | **Diesel S10 (Frete & Logística)** | ${diesel ? `R$ ${diesel.averagePrice.toFixed(2)}/L` : '—'} | ${diesel ? `${diesel.weeklyVariationPercent >= 0 ? '+' : ''}${diesel.weeklyVariationPercent.toFixed(2)}% na semana` : '—'} | ${diesel?.period || '—'} | Petrobras / ANP |
@@ -226,6 +231,12 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
                       <span>Mín: R$ {usd?.low.toFixed(4) || '5.0427'}</span>
                       <span>Máx: R$ {usd?.high.toFixed(4) || '5.0645'}</span>
                     </div>
+                    {currency?.usdTrend && (
+                      <div className="radar-subcard-trend">
+                        <span>15d: R$ {currency.usdTrend.rate15DaysAgo.toFixed(2)} → {currency.usdTrend.currentBid.toFixed(2)} ({currency.usdTrend.variation15DaysPct >= 0 ? '+' : ''}{currency.usdTrend.variation15DaysPct.toFixed(1)}%)</span>
+                        <span className="radar-peak-tag">Pico: R$ {currency.usdTrend.recentHigh.value.toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* EUR */}
@@ -251,6 +262,12 @@ Data: ${new Date().toLocaleDateString('pt-BR')} às ${lastUpdatedTime || '09:00'
                       <span>Mín: R$ {eur?.low.toFixed(4) || '5.6624'}</span>
                       <span>Máx: R$ {eur?.high.toFixed(4) || '5.6980'}</span>
                     </div>
+                    {currency?.eurTrend && (
+                      <div className="radar-subcard-trend">
+                        <span>15d: R$ {currency.eurTrend.rate15DaysAgo.toFixed(2)} → {currency.eurTrend.currentBid.toFixed(2)} ({currency.eurTrend.variation15DaysPct >= 0 ? '+' : ''}{currency.eurTrend.variation15DaysPct.toFixed(1)}%)</span>
+                        <span className="radar-peak-tag">Pico: R$ {currency.eurTrend.recentHigh.value.toFixed(2)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

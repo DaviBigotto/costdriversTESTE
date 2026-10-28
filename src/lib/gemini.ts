@@ -69,6 +69,27 @@ function getModelFallbackList(preferredModel: string): string[] {
 }
 
 /**
+ * Constrói o cabeçalho conciso de dados oficiais de câmbio (spot e histórico 15d) para contextualizar a IA.
+ */
+function buildCurrencyPromptPrefix(liveRates: any): string {
+  if (!liveRates?.usd) return '';
+  const u = liveRates.usd;
+  const e = liveRates.eur;
+  const t = liveRates.usdTrend;
+
+  let text = `[DADOS OFICIAIS DE CÂMBIO - AwesomeAPI: Dólar Comercial = R$ ${u.bid.toFixed(4)} (Hoje)`;
+  if (t) {
+    const sign15 = t.variation15DaysPct >= 0 ? '+' : '';
+    text += ` | Há 15 dias: R$ ${t.rate15DaysAgo.toFixed(4)} (Var 15d: ${sign15}${t.variation15DaysPct.toFixed(2)}%) | Pico recente 15d: R$ ${t.recentHigh.value.toFixed(4)}`;
+  }
+  if (e) {
+    text += ` | Euro = R$ ${e.bid.toFixed(4)}`;
+  }
+  text += ']\n\n';
+  return text;
+}
+
+/**
  * Filtra as fontes para exibir APENAS o que foi efetivamente citado ou pesquisado na resposta.
  * Elimina links genéricos, institucionais estáticos ou índices não mencionados.
  */
@@ -203,13 +224,14 @@ export async function generateEconomistResponse(
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
+  const currencyPrefix = buildCurrencyPromptPrefix(liveRates);
   const formattedContents = messages.map((m, idx) => {
-    if (idx === lastUserIndex && liveRates?.usd) {
+    if (idx === lastUserIndex && currencyPrefix) {
       return {
         role: 'user' as const,
         parts: [
           {
-            text: `[DADOS OFICIAIS DE CÂMBIO - AwesomeAPI: Dólar Comercial = R$ ${liveRates.usd.bid.toFixed(4)} | Euro = R$ ${liveRates.eur?.bid.toFixed(4) || '5.9812'}]\n\n${m.content}`,
+            text: `${currencyPrefix}${m.content}`,
           },
         ],
       };
@@ -377,13 +399,14 @@ export async function* streamEconomistResponse(
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
+  const currencyPrefix = buildCurrencyPromptPrefix(liveRates);
   const formattedContents = messages.map((m, idx) => {
-    if (idx === lastUserIndex && liveRates?.usd) {
+    if (idx === lastUserIndex && currencyPrefix) {
       return {
         role: 'user' as const,
         parts: [
           {
-            text: `[DADOS OFICIAIS DE CÂMBIO - AwesomeAPI: Dólar Comercial = R$ ${liveRates.usd.bid.toFixed(4)} | Euro = R$ ${liveRates.eur?.bid.toFixed(4) || '5.9812'}]\n\n${m.content}`,
+            text: `${currencyPrefix}${m.content}`,
           },
         ],
       };
@@ -624,8 +647,11 @@ export async function generateBulletinContent(
   const additionalSources: GroundingSource[] = [];
   if (liveRates?.usd) {
     currencyContext = formatCurrencyContextForPrompt(liveRates);
+    const trendSuffix = liveRates.usdTrend
+      ? ` (Hoje R$ ${liveRates.usd.bid.toFixed(4)} | 15d R$ ${liveRates.usdTrend.rate15DaysAgo.toFixed(4)})`
+      : ` (R$ ${liveRates.usd.bid.toFixed(4)})`;
     additionalSources.push({
-      title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
+      title: `AwesomeAPI — Cotação USD/BRL e Histórico 15d${trendSuffix}`,
       url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
     });
   }

@@ -2282,6 +2282,24 @@ tbody tr:hover td {
   line-height: 1.3;
 }
 
+.radar-subcard-trend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 9px;
+  color: #475569;
+  background: #F1F5F9;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.radar-peak-tag {
+  color: #DC2626;
+  font-weight: 600;
+}
+
 /* Fuel Spotlight */
 .radar-fuel-spotlight {
   background: #F8FAFD;

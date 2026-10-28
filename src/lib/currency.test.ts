@@ -37,9 +37,44 @@ describe('currency module', () => {
     };
 
     const formatted = formatCurrencyContextForPrompt(mockData);
-    expect(formatted).toContain('**Dólar Comercial (USD/BRL):** R$ 5.0461 (Compra) / R$ 5.0476 (Venda)');
+    expect(formatted).toContain('Dólar Comercial (USD/BRL');
+    expect(formatted).toContain('R$ 5.0461 (Compra) / R$ 5.0476 (Venda)');
     expect(formatted).toContain('Variação do dia: -0.36%');
     expect(formatted).toContain('AwesomeAPI');
+  });
+
+  it('formats currency trend and negotiation directive when trend data is available', () => {
+    const mockData: LiveCurrencyData = {
+      usd: {
+        code: 'USD',
+        name: 'Dólar Americano/Real Brasileiro',
+        bid: 5.3514,
+        ask: 5.3519,
+        high: 5.4191,
+        low: 5.3077,
+        pctChange: -0.37,
+        varBid: -0.0198,
+        rawDate: '2026-10-28 09:00:00',
+        formattedDate: '28/10/2026 09:00:00',
+      },
+      usdTrend: {
+        currentBid: 5.3514,
+        rate7DaysAgo: 5.0238,
+        rate15DaysAgo: 4.9918,
+        variation7DaysPct: 6.52,
+        variation15DaysPct: 7.20,
+        recentHigh: { value: 5.6040, date: '2026-10-26' },
+        recentLow: { value: 4.9636, date: '2026-10-15' },
+        history: [],
+      },
+      fetchedAt: Date.now(),
+    };
+
+    const formatted = formatCurrencyContextForPrompt(mockData);
+    expect(formatted).toContain('Histórico Real e Trajetória do Dólar nos Últimos 15 Dias');
+    expect(formatted).toContain('Cotação há 15 dias: R$ 4.9918');
+    expect(formatted).toContain('Pico Máximo da quinzena: R$ 5.6040');
+    expect(formatted).toContain('DIRETRIZ DE NEGOCIAÇÃO CAMBIAL CONTRA PLEITOS DE FORNECEDORES');
   });
 
   it('handles null currency data gracefully', () => {
