@@ -52,11 +52,11 @@ export function getGeminiClient(): GoogleGenAI {
  * Obtém o modelo configurado via variável de ambiente ou usa o default recomendado.
  */
 export function getGeminiModel(): string {
-  return process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+  return process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 }
 
 /**
- * Lista de modelos para fallback resiliente em caso de instabilidade (503/404) nos servidores do Google.
+ * Lista de modelos para fallback resiliente em caso de instabilidade (503/404/429) nos servidores do Google.
  */
 function getModelFallbackList(preferredModel: string): string[] {
   const candidates = [
@@ -64,7 +64,6 @@ function getModelFallbackList(preferredModel: string): string[] {
     'gemini-3-flash-preview',
     'gemini-3.5-flash-lite',
     'gemini-3.5-flash',
-    'gemini-3.6-flash',
   ];
   return Array.from(new Set(candidates.filter(Boolean)));
 }
@@ -230,7 +229,7 @@ export async function generateEconomistResponse(
           contents: formattedContents,
           config: {
             systemInstruction: systemInstruction,
-            temperature: 0.2,
+            temperature: 0.35,
             tools: [{ googleSearch: {} }],
           },
         });
@@ -243,9 +242,7 @@ export async function generateEconomistResponse(
           break;
         }
         // Se for 503 ou 404, tenta o próximo modelo da lista
-        if (err?.status === 503 || err?.status === 404) {
-          continue;
-        }
+        continue;
     }
   }
 
@@ -257,7 +254,7 @@ export async function generateEconomistResponse(
         contents: formattedContents,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.2,
+          temperature: 0.35,
         },
       });
 
@@ -268,9 +265,7 @@ export async function generateEconomistResponse(
       };
     } catch (err: any) {
       lastError = err;
-      if (err?.status === 503 || err?.status === 404) {
-        continue;
-      }
+      continue;
     }
   }
 
@@ -410,7 +405,7 @@ export async function* streamEconomistResponse(
         contents: formattedContents,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.2,
+          temperature: 0.35,
           tools: [{ googleSearch: {} }],
           abortSignal: controller.signal,
         },
@@ -488,7 +483,7 @@ export async function* streamEconomistResponse(
         contents: formattedContents,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.2,
+          temperature: 0.35,
           abortSignal: controller.signal,
         },
       });
@@ -619,22 +614,24 @@ export async function generateBulletinContent(
   const modelsToTry = getModelFallbackList(preferredModel);
   const matchedCategory = findCategoryReference(topic);
 
+  const [liveRates, panel, fuelReport] = await Promise.all([
+    getLiveCurrencyRates(),
+    getMacroeconomicPanel(),
+    getFuelPriceReport(),
+  ]);
+
   let currencyContext = '';
   const additionalSources: GroundingSource[] = [];
-  if (isCurrencyRelevantQuery(topic) || isCurrencyRelevantQuery(contextHistory || '')) {
-    const liveRates = await getLiveCurrencyRates();
-    if (liveRates?.usd) {
-      currencyContext = formatCurrencyContextForPrompt(liveRates);
-      additionalSources.push({
-        title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
-        url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
-      });
-    }
+  if (liveRates?.usd) {
+    currencyContext = formatCurrencyContextForPrompt(liveRates);
+    additionalSources.push({
+      title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
+      url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
+    });
   }
 
   let indicatorsContext = '';
-  if (isIndicatorsRelevantQuery(topic) || isIndicatorsRelevantQuery(contextHistory || '')) {
-    const panel = await getMacroeconomicPanel();
+  if (panel) {
     indicatorsContext = formatIndicatorsContextForPrompt(panel);
     if (panel.ipca) {
       additionalSources.push({
@@ -657,8 +654,7 @@ export async function generateBulletinContent(
   }
 
   let fuelContext = '';
-  if (isFuelRelevantQuery(topic) || isFuelRelevantQuery(contextHistory || '')) {
-    const fuelReport = await getFuelPriceReport();
+  if (fuelReport) {
     fuelContext = formatFuelContextForPrompt(fuelReport);
     additionalSources.push({
       title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
@@ -675,11 +671,24 @@ export async function generateBulletinContent(
 
   const bulletinPrompt = `
 Você deve gerar agora um **Boletim de Inteligência de Custos** executivo completo para Compras Indiretas da Plurix sobre o tema: "${topic}".
-Utilize a ferramenta de busca Google Search para pesquisar notícias, cotações recentes e o cenário de mercado mais atual para este item.
+Pesquise as notícias, cotações recentes e o cenário de mercado mais atual para este item na data de hoje (${new Date().toLocaleDateString('pt-BR')}).
 
 ${categoryContextHint}
 
-Siga ESTRITAMENTE a estrutura executiva em 9 seções analíticas completas, com dados objetivos, cálculos matemáticos fundamentados e sem premissas congeladas:
+DIRETRIZES DE AUTONOMIA E INTELIGÊNCIA ECONÔMICA (SEM INFORMAÇÕES ENGESSADAS):
+- **AUTONOMIA ANALÍTICA TOTAL:** Não use informações estáticas, pré-moldadas ou números fictícios congelados. Avalie o cenário econômico real e o contexto atual da categoria de "${topic}".
+- **CÁLCULOS DETERMINÍSTICOS VIVOS:**
+  * Decomponha os componentes de custo específicos do item pesquisado (pesos somando 100%).
+  * Estime as variações reais acumuladas nos últimos 12 meses baseadas nos índices e cotações reais mais recentes.
+  * Regra de Ouro: Overhead (custos fixos) e margem de lucro do fornecedor têm 0,0 p.p. de impacto inflacionário (não aceitar repasse inflacionário em custos fixos).
+  * Apresente a soma ponderada exata do Reajuste Teórico Justo (Should-Cost).
+  * Estime o pedido de reajuste típico do mercado e deduza o Espaço de Negociação (Gap sem lastro em custo em p.p.).
+- **ESTRATÉGIA PRÁTICA E PARAMÉTRICA:**
+  * Forneça a fórmula matemática da Cláusula Paramétrica formal customizada para os drivers reais de "${topic}".
+  * Apresente as 4 Balizas de Mesa (Abertura, Meta, Teto e Prazo/Gatilho) com justificativa técnica.
+  * Construa o roleplay prático de objeções com respostas técnicas e alternativas (BATNA).
+
+Estruture a resposta com as 9 seções analíticas a seguir:
 
 # BOLETIM DE INTELIGÊNCIA DE CUSTOS — ${topic}
 **Subtítulo:** Análise de mercado, composição de custo e estratégia de negociação para Compras Indiretas da Plurix
@@ -695,29 +704,26 @@ Siga ESTRITAMENTE a estrutura executiva em 9 seções analíticas completas, com
 
 ## 01 · Resumo Executivo & Balizas de Mesa
 - Manchete: Síntese da conjuntura de custos e sustentação do reajuste
-- Card de Recomendação:
-  * Timing: Momento adequado para fechar o contrato
-  * Contrato: Prazo sugerido e gatilhos de oscilação (±5%)
-  * Tendência: Direção dos preços nos próximos trimestres
+- Card de Recomendação (Timing ideal de contratação, modelo contratual e tendência de preços)
 - Tabela com as 4 metas operacionais de negociação:
 | Baliza | Percentual | Justificativa Técnica Econômica |
 | Abertura | [X]% | Piso da faixa teórica de negociação |
 | Meta (Should-Cost) | [X]% | Reajuste teórico ponderado exato baseado em drivers |
 | Teto | [X]% | Percentual máximo tolerável sob concessão técnica |
-| Prazo & Gatilho | 6 meses | Revisão periódica e gatilho de oscilação |
-- Três coisas fundamentais para o comprador levar à mesa de negociação.
+| Prazo & Gatilho | [Prazo contratual sugerido] | Gatilho de oscilação paramétrica (ex: ±3% a ±5%) |
+- Três direcionamentos práticos indispensáveis para o comprador levar à mesa.
 
 ## 02 · Estrutura de Mercado e Cadeia de Valor
-- Manchete sobre a concentração de fornecedores e dinâmica de oferta do insumo
+- Síntese da conjuntura de mercado, concentração de fornecedores e dinâmica de oferta do insumo
 - Tabela de elos da cadeia:
 | Elo da Cadeia | Situação Atual de Mercado | Efeito sobre o Custo para a Plurix |
 (Analisar matérias-primas básicas, fabricantes/transformadores intermediários, logística e distribuição).
-- Riscos de abastecimento, concentração de fornecedores ou barreiras regulatórias/tributárias.
+- Riscos de abastecimento, concentração ou impactos regulatórios/tributários.
 
 ## 03 · Composição de Custos e Drivers
 - Tabela de composição estimada do preço (%):
 | Componente | Peso (%) | Driver de Mercado |
-(Preencher com os componentes da categoria somando 100%, destacando que custos fixos e margem não devem sofrer reajuste por inflação de insumos).
+(Preencher com os componentes da categoria somando 100%, com overhead e margem claramente identificados).
 
 ## 04 · Drivers: Histórico e Situação Atual
 - Tabela de variação em 12 meses dos drivers relevantes:
@@ -740,9 +746,9 @@ Siga ESTRITAMENTE a estrutura executiva em 9 seções analíticas completas, com
 - Tabela de sinais operacionais a monitorar pelo comprador.
 
 ## 08 · Estratégia de Negociação, Cláusula Paramétrica e Objeções
-- Minuta da Cláusula Paramétrica formal de reajuste com a fórmula matemática pronta para minuta de contrato:
+- Minuta da Cláusula Paramétrica formal de reajuste com a fórmula matemática pronta para minuta de aditivo/contrato:
   P(t) = P(0) * [ w1*(D1_t/D1_0) + w2*(D2_t/D2_0) + ... + w_fixo ]
-- Argumentos com números & Alternativas (BATNA): Consolidação do volume da rede Plurix, otimização de especificações e cotações spot.
+- Argumentos com números & Alternativas (BATNA): Consolidação do volume da rede Plurix, otimização técnica e alternativas de fornecimento.
 - Tabela prática de Roleplay de Objeções:
 | Objeção Típica do Fornecedor | Resposta Técnica do Comprador com Dados |
 
@@ -756,7 +762,7 @@ REGRAS OBRIGATÓRIAS:
 - Formate todas as tabelas em Markdown limpo.
 `;
 
-  // Tenta com tools primeiro, fallback sem tools
+  // 1ª Tentativa: Com Google Search tools
   for (const modelName of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
@@ -764,20 +770,21 @@ REGRAS OBRIGATÓRIAS:
         contents: [{ role: 'user', parts: [{ text: bulletinPrompt }] }],
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.2,
+          temperature: 0.35,
           tools: [{ googleSearch: {} }],
         },
       });
 
       return processGeminiSuccess(response, matchedCategory, topic, additionalSources);
     } catch (err: any) {
-      if (err?.status === 429 || err?.message?.includes('RESOURCE_EXHAUSTED')) {
-        break; // vai para fallback sem tool
+      if (err?.status === 429 || err?.message?.includes('RESOURCE_EXHAUSTED') || err?.message?.includes('quota')) {
+        break; // cota de search esgotada na chave, pula direto para o fallback sem tools
       }
+      continue;
     }
   }
 
-  // Fallback sem tool
+  // 2ª Tentativa: Geração analítica direta sem Search Grounding (altamente resiliente)
   for (const modelName of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
@@ -785,15 +792,13 @@ REGRAS OBRIGATÓRIAS:
         contents: [{ role: 'user', parts: [{ text: bulletinPrompt }] }],
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.2,
+          temperature: 0.35,
         },
       });
 
       return processGeminiSuccess(response, matchedCategory, topic, additionalSources);
     } catch (err: any) {
-      if (err?.status === 503 || err?.status === 404) {
-        continue;
-      }
+      continue;
     }
   }
 
