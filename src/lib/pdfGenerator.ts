@@ -34,11 +34,19 @@ const C = {
 };
 
 /**
- * Sanitiza textos removendo emojis e caracteres não compatíveis com fontes padrão do jsPDF.
+ * Sanitiza textos removendo emojis, formatações de markdown inline (**, _, `)
+ * e caracteres não compatíveis com fontes padrão do jsPDF.
  */
 function cleanText(text: string): string {
   if (!text) return '';
-  return text
+  let cleaned = text;
+  // Remove marcações de negrito e itálico preservando o conteúdo
+  cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+  cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+  cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
+  // Se ainda sobraram asteriscos ou underscores soltos nas pontas
+  cleaned = cleaned.replace(/^\*+|\*+$/g, '').replace(/^_+|_+$/g, '');
+  return cleaned
     .replace(/[^\x00-\x7F\xC0-\xFF]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -73,16 +81,48 @@ function extractBigNumbers(markdown: string) {
   let gap = '';
   let trend = '';
 
-  const scMatch = markdown.match(/(?:Should-Cost|Reajuste Te[oó]rico|Te[oó]rico)[^%\d\n]*([+\-]?\d+(?:[,\.]\d+)?\s*%)/i);
+  // 1. Prioriza a extração do bloco oficial DESTAQUES DA CAPA
+  const coverMatch = markdown.match(/(?:DESTAQUES DA CAPA|BIG NUMBERS)[\s\S]*?(?=##|\n\n#|$)/i);
+  const searchBlock = coverMatch ? coverMatch[0] : markdown;
+
+  // Should-Cost
+  const scMatch = searchBlock.match(/(?:Should-Cost|Reajuste Te[oó]rico|Te[oó]rico)[^%\d\n]*([+\-]?\d+(?:[,\.]\d+)?\s*%)/i) ||
+                  markdown.match(/(?:Should-Cost|Reajuste Te[oó]rico|Te[oó]rico)[^%\d\n]*([+\-]?\d+(?:[,\.]\d+)?\s*%)/i);
   if (scMatch) shouldCost = scMatch[1].trim();
 
-  const gapMatch = markdown.match(/(?:Espa[cç]o de Negocia[cç][aã]o|Gap|Gordura|sem lastro)[^\d\n]*([+\-]?\d+(?:[,\.]\d+)?\s*(?:p\.?p\.?|%))/i);
-  if (gapMatch) gap = gapMatch[1].trim();
+  // Gap / Espaço de Negociação (busca especificamente padrão de gap em p.p. ou intervalo)
+  const gapDirectMatch = searchBlock.match(/(?:Espa[cç]o de Negocia[cç][aã]o|Gap|Gordura|sem lastro)[^:\n]*:\s*[*_]*([+\-]?\d+(?:[,\.]\d+)?(?:\s*a\s*\d+(?:[,\.]\d+)?)?\s*(?:p\.?p\.?|%))/i) ||
+                         markdown.match(/(?:Espa[cç]o de Negocia[cç][aã]o|Gap|Gordura|sem lastro)[^:\n]*:\s*[*_]*([+\-]?\d+(?:[,\.]\d+)?(?:\s*a\s*\d+(?:[,\.]\d+)?)?\s*(?:p\.?p\.?|%))/i);
+  if (gapDirectMatch) {
+    gap = gapDirectMatch[1].trim();
+  }
 
-  const trendMatch = markdown.match(/(?:Proje[cç][aã]o 12 Meses|Tend[eê]ncia|custo esperado)[^\d\n]*([+\-]?\d+(?:[,\.]\d+)?\s*%)/i);
-  if (trendMatch) trend = trendMatch[1].trim();
+  // Se não localizou ou pegou uma porcentagem isolada do pedido do fornecedor, busca explicitamente p.p. de gap
+  if (!gap || (!gap.includes('p.p.') && markdown.includes('p.p.'))) {
+    const ppMatch = markdown.match(/([+\-]?\d+(?:[,\.]\d+)?(?:\s*a\s*\d+(?:[,\.]\d+)?)?\s*p\.?p\.?)(?:\s*(?:de|do)?\s*(?:espa[cç]o|gap|sem lastro|pedido)?)/i);
+    if (ppMatch) gap = ppMatch[1].trim();
+  }
 
-  // Valores de contingência caso não localizados por regex específico
+  // Trend / Tendência
+  const trendTextMatch = searchBlock.match(/(?:Proje[cç][aã]o 12 Meses|Tend[eê]ncia|custo esperado)[^:\n]*:\s*[*_]*([A-Za-zÀ-ÿ\s]+)/i);
+  if (trendTextMatch) {
+    const rawTrend = trendTextMatch[1].trim().split(/[\n\(\.]/)[0].trim();
+    if (rawTrend && rawTrend.length < 35) {
+      const up = rawTrend.toUpperCase();
+      trend = up.includes('ALÍVIO') || up.includes('BAIXA') || up.includes('QUEDA')
+        ? 'Alívio / Baixa'
+        : up.includes('PRESSÃO') || up.includes('ALTA')
+        ? 'Pressão / Alta'
+        : 'Estável';
+    }
+  }
+
+  if (!trend) {
+    const trendPct = markdown.match(/(?:Proje[cç][aã]o 12 Meses|Tend[eê]ncia)[^\d\n]*([+\-]?\d+(?:[,\.]\d+)?\s*%)/i);
+    if (trendPct) trend = trendPct[1].trim();
+  }
+
+  // Valores de contingência caso não localizados
   if (!shouldCost) {
     const genericPct = markdown.match(/(\d+(?:[,\.]\d+)?\s*%)/);
     shouldCost = genericPct ? genericPct[1].trim() : 'Sob Consulta';
@@ -91,6 +131,67 @@ function extractBigNumbers(markdown: string) {
   if (!trend) trend = 'Estável';
 
   return { shouldCost, gap, trend };
+}
+
+/**
+ * Calcula larguras inteligentes e balanceadas para colunas de tabelas executivas.
+ */
+function calculateColumnWidths(headers: string[], totalWidth: number): number[] {
+  const numCols = headers.length;
+  if (numCols <= 1) return [totalWidth];
+
+  const hJoined = headers.join(' ').toLowerCase();
+
+  // 1. Roleplay de Objeções (2 colunas: Objeção, Resposta Técnica)
+  if (numCols === 2 && (hJoined.includes('obje') || hJoined.includes('resposta') || hJoined.includes('fornecedor'))) {
+    return [totalWidth * 0.40, totalWidth * 0.60];
+  }
+
+  // 2. Balizas de Mesa (3 colunas: Baliza, Percentual, Justificativa Técnica)
+  if (numCols === 3 && (hJoined.includes('baliza') || hJoined.includes('meta'))) {
+    return [totalWidth * 0.18, totalWidth * 0.16, totalWidth * 0.66];
+  }
+
+  // 3. Elo da Cadeia (3 colunas: Elo, Situação, Efeito)
+  if (numCols === 3 && (hJoined.includes('elo') || hJoined.includes('cadeia'))) {
+    return [totalWidth * 0.24, totalWidth * 0.38, totalWidth * 0.38];
+  }
+
+  // 4. Fontes Oficiais (3 colunas: Fonte, Dado Utilizado, Período)
+  if (numCols === 3 && (hJoined.includes('fonte') || hJoined.includes('dado') || hJoined.includes('oficial'))) {
+    return [totalWidth * 0.26, totalWidth * 0.48, totalWidth * 0.26];
+  }
+
+  // 5. Matriz de Drivers & Waterfall (6 colunas: Componente, Peso, Driver, Variação, Contribuição, Fonte)
+  if (numCols === 6 && (hJoined.includes('peso') || hJoined.includes('contribui') || hJoined.includes('driver'))) {
+    return [
+      totalWidth * 0.18, // Componente
+      totalWidth * 0.10, // Peso (%)
+      totalWidth * 0.28, // Driver de Mercado
+      totalWidth * 0.14, // Variação 12m (%)
+      totalWidth * 0.14, // Contribuição (p.p.)
+      totalWidth * 0.16, // Fonte Oficial
+    ];
+  }
+
+  // 6. Matriz de Drivers (5 colunas: Componente, Peso, Driver, Variação, Contribuição)
+  if (numCols === 5 && (hJoined.includes('peso') || hJoined.includes('contribui'))) {
+    return [
+      totalWidth * 0.22, // Componente
+      totalWidth * 0.12, // Peso (%)
+      totalWidth * 0.34, // Driver de Mercado
+      totalWidth * 0.16, // Variação (%)
+      totalWidth * 0.16, // Contribuição (p.p.)
+    ];
+  }
+
+  // 7. Indicadores / Cenários / Projeções (4 colunas: Indicador, Valor, Tendência/Data, Leitura)
+  if (numCols === 4 && (hJoined.includes('indicador') || hJoined.includes('leitura') || hJoined.includes('tendência') || hJoined.includes('tendencia'))) {
+    return [totalWidth * 0.28, totalWidth * 0.22, totalWidth * 0.26, totalWidth * 0.24];
+  }
+
+  // Fallback: Distribuição uniforme
+  return Array(numCols).fill(totalWidth / numCols);
 }
 
 interface MarkdownBlock {
@@ -119,10 +220,13 @@ function parseMarkdownToBlocks(markdown: string): MarkdownBlock[] {
       for (let i = 2; i < currentTableLines.length; i++) {
         const rowCells = currentTableLines[i]
           .split('|')
-          .map((c) => cleanText(c.replace(/[*_]/g, '')))
+          .map((c) => cleanText(c))
           .filter(Boolean);
         if (rowCells.length > 0) {
-          rows.push(rowCells);
+          // Garante que não é uma linha divisória repetida |:---|:---|
+          if (!rowCells.every((c) => /^[-:\s]+$/.test(c))) {
+            rows.push(rowCells);
+          }
         }
       }
 
@@ -137,9 +241,23 @@ function parseMarkdownToBlocks(markdown: string): MarkdownBlock[] {
     currentTableLines = [];
   };
 
-  for (let i = 0; i < lines.length; i++) {
+  // Identifica onde começa o conteúdo real do boletim (a primeira seção ## )
+  // Tudo antes do primeiro '## ' é metadado de capa (título, subtítulo, big numbers)
+  // que já foi desenhado com perfeição visual na Capa (Página 1).
+  let startIndex = 0;
+  const firstSectionIdx = lines.findIndex((l) => l.trim().startsWith('## '));
+  if (firstSectionIdx !== -1) {
+    startIndex = firstSectionIdx;
+  }
+
+  for (let i = startIndex; i < lines.length; i++) {
     const rawLine = lines[i];
     const trimmed = rawLine.trim();
+
+    // Ignora linhas divisórias horizontais do markdown (---, ***, ___)
+    if (trimmed === '---' || trimmed === '***' || trimmed === '___' || /^[-*_]{3,}$/.test(trimmed)) {
+      continue;
+    }
 
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       currentTableLines.push(trimmed);
@@ -295,7 +413,7 @@ export function generateBulletinPdf({
   doc.rect(margin, statCardY, statCardW, 3, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(shouldCost.length > 8 ? 17 : 22);
   doc.setTextColor(...C.plurixNavy);
   doc.text(shouldCost, margin + 5, statCardY + 17);
 
@@ -318,7 +436,7 @@ export function generateBulletinPdf({
   doc.rect(stat2X, statCardY, statCardW, 3, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(gap.length > 10 ? 15 : gap.length > 6 ? 18 : 22);
   doc.setTextColor(...C.amber);
   doc.text(gap, stat2X + 5, statCardY + 17);
 
@@ -341,7 +459,7 @@ export function generateBulletinPdf({
   doc.rect(stat3X, statCardY, statCardW, 3, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(trend.length > 10 ? 15 : trend.length > 6 ? 18 : 22);
   doc.setTextColor(...C.emerald);
   doc.text(trend, stat3X + 5, statCardY + 17);
 
@@ -379,9 +497,15 @@ export function generateBulletinPdf({
   doc.setTextColor(203, 213, 225);
   doc.text('CATEGORIA AUDITADA', margin + 12, metaY + 19);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(cleanTopic.length > 30 ? 7 : 8);
   doc.setTextColor(255, 255, 255);
-  doc.text(cleanTopic.slice(0, 36), margin + 12, metaY + 25);
+  const catLines = doc.splitTextToSize(cleanTopic, tileW - 8);
+  if (catLines.length > 1) {
+    doc.text(catLines[0], margin + 12, metaY + 23.5);
+    doc.text(catLines[1], margin + 12, metaY + 27);
+  } else {
+    doc.text(catLines[0] || cleanTopic, margin + 12, metaY + 25);
+  }
 
   // Tile 2: Escopo
   doc.setFillColor(...C.plurixNavy);
@@ -523,16 +647,19 @@ export function generateBulletinPdf({
       doc.text(lines, margin, y + 3);
       y += lines.length * 4.2 + 3;
     } else if (block.type === 'table' && block.tableData) {
-      // Renderização dinâmica de tabelas em vetorial limpo
+      // Renderização dinâmica de tabelas em vetorial limpo com multi-linha e larguras inteligentes
       const { headers, rows } = block.tableData;
       const numCols = headers.length;
       if (numCols === 0) continue;
 
-      const colW = contentWidth / numCols;
-      const headerH = 7.5;
-      const rowH = 6.8;
+      const colWidths = calculateColumnWidths(headers, contentWidth);
+      const headerLines = headers.map((h, cIdx) =>
+        doc.splitTextToSize(h, (colWidths[cIdx] || contentWidth / numCols) - 4)
+      );
+      const maxHeaderLines = Math.max(...headerLines.map((l) => l.length), 1);
+      const headerH = Math.max(7.5, maxHeaderLines * 3.8 + 3.5);
 
-      checkPageBreak(headerH + Math.min(rows.length, 3) * rowH + 8);
+      checkPageBreak(headerH + Math.min(rows.length, 2) * 8 + 8);
 
       // Cabeçalho da Tabela
       doc.setFillColor(...C.plurixRoyal);
@@ -541,37 +668,52 @@ export function generateBulletinPdf({
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7.5);
       doc.setTextColor(255, 255, 255);
-      headers.forEach((h, cIdx) => {
-        const textH = doc.splitTextToSize(h, colW - 4);
-        doc.text(textH[0] || '', margin + cIdx * colW + 3, y + 5);
+
+      let curHeadX = margin;
+      headers.forEach((_, cIdx) => {
+        const w = colWidths[cIdx] || contentWidth / numCols;
+        const linesH = headerLines[cIdx];
+        doc.text(linesH, curHeadX + 2.5, y + 4.5);
+        curHeadX += w;
       });
       y += headerH;
 
       // Linhas de dados da Tabela
       rows.forEach((r, rIdx) => {
-        checkPageBreak(rowH + 2);
+        const rowCellsLines = r.map((cell, cIdx) => {
+          const w = colWidths[cIdx] || contentWidth / numCols;
+          return doc.splitTextToSize(cell || '', w - 4);
+        });
+        const maxCellLines = Math.max(...rowCellsLines.map((l) => l.length), 1);
+        const lineHeight = 3.5;
+        const currentRowH = Math.max(6.8, maxCellLines * lineHeight + 3.2);
+
+        checkPageBreak(currentRowH + 2);
 
         doc.setFillColor(...(rIdx % 2 === 1 ? C.rowAlt : C.surfaceWhite));
-        doc.rect(margin, y, contentWidth, rowH, 'F');
+        doc.rect(margin, y, contentWidth, currentRowH, 'F');
 
         doc.setDrawColor(...C.borderDivider);
         doc.setLineWidth(0.2);
-        doc.line(margin, y + rowH, margin + contentWidth, y + rowH);
+        doc.line(margin, y + currentRowH, margin + contentWidth, y + currentRowH);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.2);
         doc.setTextColor(...C.textPrimary);
 
-        r.forEach((cell, cIdx) => {
+        let curRowX = margin;
+        r.forEach((_, cIdx) => {
+          const w = colWidths[cIdx] || contentWidth / numCols;
           if (cIdx < numCols) {
-            const cellLines = doc.splitTextToSize(cell, colW - 4);
-            doc.text(cellLines[0] || '', margin + cIdx * colW + 3, y + 4.6);
+            const cellLines = rowCellsLines[cIdx];
+            doc.text(cellLines, curRowX + 2.5, y + 4.2);
           }
+          curRowX += w;
         });
-        y += rowH;
+        y += currentRowH;
       });
 
-      y += 6;
+      y += 5;
     }
   }
 
