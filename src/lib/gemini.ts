@@ -703,10 +703,10 @@ ${categoryContextHint}
 
 DIRETRIZES DE AUTONOMIA E INTELIGÊNCIA ECONÔMICA (SEM INFORMAÇÕES ENGESSADAS):
 - **AUTONOMIA ANALÍTICA TOTAL:** Não use informações estáticas, pré-moldadas ou números fictícios congelados. Avalie o cenário econômico real e o contexto atual da categoria de "${topic}".
-- **CÁLCULOS DETERMINÍSTICOS VIVOS:**
-  * Decomponha os componentes de custo específicos do item pesquisado (pesos somando 100%).
+- **CÁLCULOS DETERMINÍSTICOS VIVOS & PESOS DINÂMICOS:**
+  * Decomponha os componentes de custo específicos do item pesquisado (pesos somando 100%), calibrando conforme a especificação técnica (ex: teor de resina reciclada PCR, gramatura ou carga mineral).
   * Estime as variações reais acumuladas nos últimos 12 meses baseadas nos índices e cotações reais mais recentes.
-  * Regra de Ouro: Overhead (custos fixos) e margem de lucro do fornecedor têm 0,0 p.p. de impacto inflacionário (não aceitar repasse inflacionário em custos fixos).
+  * Regra de Ouro de Compras: Custos Fixos (Overhead) e margem de lucro do fornecedor têm 0,0 p.p. de impacto inflacionário justificável (diluição fabril pela escala corporativa da rede Plurix).
   * Apresente a soma ponderada exata do Reajuste Teórico Justo (Should-Cost).
   * Estime o pedido de reajuste típico do mercado e deduza o Espaço de Negociação (Gap sem lastro em custo em p.p.).
 - **ESTRATÉGIA PRÁTICA E PARAMÉTRICA:**
@@ -714,7 +714,7 @@ DIRETRIZES DE AUTONOMIA E INTELIGÊNCIA ECONÔMICA (SEM INFORMAÇÕES ENGESSADAS
   * Apresente as 4 Balizas de Mesa (Abertura, Meta, Teto e Prazo/Gatilho) com justificativa técnica.
   * Construa o roleplay prático de objeções com respostas técnicas e alternativas (BATNA).
 
-Estruture a resposta com as 9 seções analíticas a seguir:
+Estruture a resposta com as 7 seções analíticas executivas a seguir:
 
 # BOLETIM DE INTELIGÊNCIA DE CUSTOS — ${topic}
 **Subtítulo:** Análise de mercado, composição de custo e estratégia de negociação para Compras Indiretas da Plurix
@@ -746,39 +746,33 @@ Estruture a resposta com as 9 seções analíticas a seguir:
 (Analisar matérias-primas básicas, fabricantes/transformadores intermediários, logística e distribuição).
 - Riscos de abastecimento, concentração ou impactos regulatórios/tributários.
 
-## 03 · Composição de Custos e Drivers
-- Tabela de composição estimada do preço (%):
-| Componente | Peso (%) | Driver de Mercado |
-(Preencher com os componentes da categoria somando 100%, com overhead e margem claramente identificados).
-
-## 04 · Drivers: Histórico e Situação Atual
-- Tabela de variação em 12 meses dos drivers relevantes:
-| Driver | Variação 12m (%) | Fonte Oficial / Evidência Pública |
-(Pesquisar e apresentar as variações reais recentes dos índices, commodities e mão de obra envolvidos).
-
-## 05 · Projeções e Cenários
-- Tabela com os principais indicadores e direcionamento:
-| Indicador / Driver | Valor Mais Recente | Data / Período | Leitura (PRESSÃO / ALÍVIO / ESTÁVEL) |
-- Cenário Base, Cenário Otimista e Cenário Pessimista para os próximos 12 meses.
-
-## 06 · Impacto no Preço (Cascata Waterfall em p.p.)
-- Tabela de contribuição por componente:
-| Componente | Peso (%) | Variação Verificada (%) | Contribuição (p.p.) |
+## 03 · Matriz de Drivers & Cascata Should-Cost (Waterfall)
+- Tabela consolidada de custos e auditoria em pontos percentuais (p.p.):
+| Componente | Peso (%) | Driver de Mercado | Variação 12m (%) | Contribuição (p.p.) | Fonte Oficial / Evidência |
 (Multiplicar Peso % x Variação % para cada componente. Custos fixos e margem = 0,0 p.p. Somar o Should-Cost Teórico Total).
 - Confronto numérico: Should-Cost Teórico vs Pedido Típico do Fornecedor = Espaço de negociação em p.p. sem lastro em custo.
+- Explicação técnica dos principais vetores de alta ou alívio e diluição de overhead pela escala corporativa Plurix.
 
-## 07 · Matriz de Riscos e Sinais de Monitoramento
-- Matriz 2x2 de Riscos (Plano B, Proteger em Contrato, Acompanhar, Absorver na Fórmula).
-- Tabela de sinais operacionais a monitorar pelo comprador.
+## 04 · Cenários e Projeções Econômicas (12 Meses)
+- Tabela com os principais indicadores e direcionamento:
+| Indicador / Driver | Valor Mais Recente | Período / Data | Leitura (PRESSÃO / ALÍVIO / ESTÁVEL) |
+- Análise de 3 cenários prospectivos:
+  * **Cenário Base:** Tendência mais provável de mercado.
+  * **Cenário Otimista:** Fatores de alívio e deflação potencial.
+  * **Cenário de Risco:** Fatores de estresse cambial ou de commodities.
 
-## 08 · Estratégia de Negociação, Cláusula Paramétrica e Objeções
+## 05 · Matriz de Riscos e Sinais de Alerta
+- Matriz de Riscos (Plano B, Proteger em Contrato, Acompanhar, Absorver na Fórmula).
+- Tabela de sinais operacionais a monitorar pelo comprador no dia a dia.
+
+## 06 · Estratégia de Mesa, Cláusula Paramétrica e Roleplay de Objeções
 - Minuta da Cláusula Paramétrica formal de reajuste com a fórmula matemática pronta para minuta de aditivo/contrato:
   P(t) = P(0) * [ w1*(D1_t/D1_0) + w2*(D2_t/D2_0) + ... + w_fixo ]
-- Argumentos com números & Alternativas (BATNA): Consolidação do volume da rede Plurix, otimização técnica e alternativas de fornecimento.
+- Argumentos com números & Alternativas (BATNA): Consolidação do volume da rede Plurix, otimização técnica (ex: blend com resina reciclada PCR ou carbonato de cálcio) e fornecedores alternativos.
 - Tabela prática de Roleplay de Objeções:
 | Objeção Típica do Fornecedor | Resposta Técnica do Comprador com Dados |
 
-## 09 · Fontes Oficiais e Metodologia
+## 07 · Fontes Oficiais e Metodologia
 - Tabela formal de fontes consultadas:
 | Fonte | Dado Utilizado | Período de Referência |
 
