@@ -90,6 +90,35 @@ function buildCurrencyPromptPrefix(liveRates: any): string {
 }
 
 /**
+ * Detecta se a mensagem do usuário é apenas uma saudação social simples
+ * (ex: "bom dia", "boa tarde", "olá", "oi", "tudo bem?", "como vai?").
+ */
+export function isSimpleGreeting(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const clean = text
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!clean) return false;
+
+  const words = clean.split(' ').filter(Boolean);
+  if (words.length > 5) return false;
+
+  const greetingTokens = new Set([
+    'bom', 'boa', 'dia', 'tarde', 'noite',
+    'ola', 'oi', 'oie', 'opa', 'fala',
+    'tudo', 'bem', 'bom', 'como', 'vai',
+    'e', 'ai', 'beleza', 'blz', 'tranquilo', 'salve'
+  ]);
+
+  return words.length > 0 && words.every((w) => greetingTokens.has(w));
+}
+
+/**
  * Filtra as fontes para exibir APENAS o que foi efetivamente citado ou pesquisado na resposta.
  * Elimina links genéricos, institucionais estáticos ou índices não mencionados.
  */
@@ -166,10 +195,11 @@ export async function generateEconomistResponse(
 
   // Contextualização com base na biblioteca de custos e dados de câmbio em tempo real (AwesomeAPI)
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const isGreeting = isSimpleGreeting(lastUserMsg);
   const allUserText = messages.filter((m) => m.role === 'user').map((m) => m.content).join(' ');
   const topicToExamine = customTopic || lastUserMsg;
-  const matchedCategory = findCategoryReference(topicToExamine);
-  const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
+  const matchedCategory = isGreeting ? null : findCategoryReference(topicToExamine);
+  const isCurrencyRelevant = !isGreeting && (isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText));
 
   const [liveRates, panel, fuelReport] = await Promise.all([
     getLiveCurrencyRates(),
@@ -178,53 +208,57 @@ export async function generateEconomistResponse(
   ]);
 
   let currencyContext = '';
+  let indicatorsContext = '';
+  let fuelContext = '';
   const additionalSources: GroundingSource[] = [];
 
-  if (liveRates?.usd) {
-    currencyContext = formatCurrencyContextForPrompt(liveRates);
-    additionalSources.push({
-      title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
-      url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
-    });
-  }
-
-  let indicatorsContext = '';
-  if (panel) {
-    indicatorsContext = formatIndicatorsContextForPrompt(panel);
-    if (panel.ipca) {
+  if (!isGreeting) {
+    if (liveRates?.usd) {
+      currencyContext = formatCurrencyContextForPrompt(liveRates);
       additionalSources.push({
-        title: `IBGE — IPCA Oficial (${panel.ipca.referencePeriod}): 12m ${panel.ipca.accumulated12m}%`,
-        url: panel.ipca.sourceUrl,
+        title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
+        url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
       });
     }
-    if (panel.inpc) {
-      additionalSources.push({
-        title: `IBGE — INPC Oficial (${panel.inpc.referencePeriod}): 12m ${panel.inpc.accumulated12m}%`,
-        url: panel.inpc.sourceUrl,
-      });
+
+    if (panel) {
+      indicatorsContext = formatIndicatorsContextForPrompt(panel);
+      if (panel.ipca) {
+        additionalSources.push({
+          title: `IBGE — IPCA Oficial (${panel.ipca.referencePeriod}): 12m ${panel.ipca.accumulated12m}%`,
+          url: panel.ipca.sourceUrl,
+        });
+      }
+      if (panel.inpc) {
+        additionalSources.push({
+          title: `IBGE — INPC Oficial (${panel.inpc.referencePeriod}): 12m ${panel.inpc.accumulated12m}%`,
+          url: panel.inpc.sourceUrl,
+        });
+      }
+      if (panel.selic) {
+        additionalSources.push({
+          title: `Banco Central — Taxa Selic (${panel.selic.annualRate}% a.a.)`,
+          url: panel.selic.sourceUrl,
+        });
+      }
     }
-    if (panel.selic) {
+
+    if (fuelReport) {
+      fuelContext = formatFuelContextForPrompt(fuelReport);
       additionalSources.push({
-        title: `Banco Central — Taxa Selic (${panel.selic.annualRate}% a.a.)`,
-        url: panel.selic.sourceUrl,
+        title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
+        url: 'https://precos.petrobras.com.br/precos-diesel',
       });
     }
   }
 
-  let fuelContext = '';
-  if (fuelReport) {
-    fuelContext = formatFuelContextForPrompt(fuelReport);
-    additionalSources.push({
-      title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
-      url: 'https://precos.petrobras.com.br/precos-diesel',
-    });
-  }
-
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
+  const combinedExtraContext = isGreeting
+    ? ''
+    : [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
-  const currencyPrefix = buildCurrencyPromptPrefix(liveRates);
+  const currencyPrefix = (!isGreeting && isCurrencyRelevant) ? buildCurrencyPromptPrefix(liveRates) : '';
   const formattedContents = messages.map((m, idx) => {
     if (idx === lastUserIndex && currencyPrefix) {
       return {
@@ -242,8 +276,9 @@ export async function generateEconomistResponse(
     };
   });
 
-  // 1ª Tentativa: Com Google Search Grounding em tempo real para todas as pesquisas
+  // 1ª Tentativa: Com Google Search Grounding em tempo real (exceto saudações simples que não requerem busca)
   let lastError: any = null;
+  const configTools = isGreeting ? undefined : [{ googleSearch: {} }];
   for (const modelName of modelsToTry) {
       try {
         const response = await ai.models.generateContent({
@@ -251,12 +286,16 @@ export async function generateEconomistResponse(
           contents: formattedContents,
           config: {
             systemInstruction: systemInstruction,
-            temperature: 0.35,
-            tools: [{ googleSearch: {} }],
+            temperature: isGreeting ? 0.6 : 0.35,
+            ...(configTools ? { tools: configTools } : {}),
           },
         });
 
-        return processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
+        const processed = processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
+        return {
+          ...processed,
+          sources: isGreeting ? [] : filterRelevantSources(processed.sources, processed.text, lastUserMsg),
+        };
       } catch (err: any) {
         lastError = err;
         // Se for erro de quota do Google Search Grounding (429) ou recusa de tools, interrompe e vai para o fallback sem tools
@@ -276,14 +315,14 @@ export async function generateEconomistResponse(
         contents: formattedContents,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.35,
+          temperature: isGreeting ? 0.6 : 0.35,
         },
       });
 
       const processed = processGeminiSuccess(response, matchedCategory, lastUserMsg, additionalSources);
       return {
         ...processed,
-        sources: filterRelevantSources(processed.sources, processed.text, lastUserMsg),
+        sources: isGreeting ? [] : filterRelevantSources(processed.sources, processed.text, lastUserMsg),
       };
     } catch (err: any) {
       lastError = err;
@@ -340,10 +379,11 @@ export async function* streamEconomistResponse(
   const modelsToTry = getModelFallbackList(preferredModel);
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')?.content || '';
+  const isGreeting = isSimpleGreeting(lastUserMsg);
   const allUserText = messages.filter((m) => m.role === 'user').map((m) => m.content).join(' ');
   const topicToExamine = customTopic || lastUserMsg;
-  const matchedCategory = findCategoryReference(topicToExamine);
-  const isCurrencyRelevant = isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText);
+  const matchedCategory = isGreeting ? null : findCategoryReference(topicToExamine);
+  const isCurrencyRelevant = !isGreeting && (isCurrencyRelevantQuery(topicToExamine) || isCurrencyRelevantQuery(allUserText));
 
   // Busca paralela ultra-rápida de indicadores
   const [liveRates, panel, fuelReport] = await Promise.all([
@@ -353,53 +393,57 @@ export async function* streamEconomistResponse(
   ]);
 
   let currencyContext = '';
+  let indicatorsContext = '';
+  let fuelContext = '';
   const additionalSources: GroundingSource[] = [];
 
-  if (liveRates?.usd) {
-    currencyContext = formatCurrencyContextForPrompt(liveRates);
-    additionalSources.push({
-      title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
-      url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
-    });
-  }
-
-  let indicatorsContext = '';
-  if (panel) {
-    indicatorsContext = formatIndicatorsContextForPrompt(panel);
-    if (panel.ipca) {
+  if (!isGreeting) {
+    if (liveRates?.usd) {
+      currencyContext = formatCurrencyContextForPrompt(liveRates);
       additionalSources.push({
-        title: `IBGE — IPCA Oficial (${panel.ipca.referencePeriod}): 12m ${panel.ipca.accumulated12m}%`,
-        url: panel.ipca.sourceUrl,
+        title: `AwesomeAPI — Cotação USD/BRL em Tempo Real (R$ ${liveRates.usd.bid.toFixed(4)})`,
+        url: 'https://economia.awesomeapi.com.br/last/USD-BRL',
       });
     }
-    if (panel.inpc) {
-      additionalSources.push({
-        title: `IBGE — INPC Oficial (${panel.inpc.referencePeriod}): 12m ${panel.inpc.accumulated12m}%`,
-        url: panel.inpc.sourceUrl,
-      });
+
+    if (panel) {
+      indicatorsContext = formatIndicatorsContextForPrompt(panel);
+      if (panel.ipca) {
+        additionalSources.push({
+          title: `IBGE — IPCA Oficial (${panel.ipca.referencePeriod}): 12m ${panel.ipca.accumulated12m}%`,
+          url: panel.ipca.sourceUrl,
+        });
+      }
+      if (panel.inpc) {
+        additionalSources.push({
+          title: `IBGE — INPC Oficial (${panel.inpc.referencePeriod}): 12m ${panel.inpc.accumulated12m}%`,
+          url: panel.inpc.sourceUrl,
+        });
+      }
+      if (panel.selic) {
+        additionalSources.push({
+          title: `Banco Central — Taxa Selic (${panel.selic.annualRate}% a.a.)`,
+          url: panel.selic.sourceUrl,
+        });
+      }
     }
-    if (panel.selic) {
+
+    if (fuelReport) {
+      fuelContext = formatFuelContextForPrompt(fuelReport);
       additionalSources.push({
-        title: `Banco Central — Taxa Selic (${panel.selic.annualRate}% a.a.)`,
-        url: panel.selic.sourceUrl,
+        title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
+        url: 'https://precos.petrobras.com.br/precos-diesel',
       });
     }
   }
 
-  let fuelContext = '';
-  if (fuelReport) {
-    fuelContext = formatFuelContextForPrompt(fuelReport);
-    additionalSources.push({
-      title: `Petrobras — Preços dos Combustíveis e Composição na Bomba (Diesel S10: R$ ${fuelReport.dieselS10Brasil.averagePrice.toFixed(2)}/L)`,
-      url: 'https://precos.petrobras.com.br/precos-diesel',
-    });
-  }
-
-  const combinedExtraContext = [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
+  const combinedExtraContext = isGreeting
+    ? ''
+    : [currencyContext, indicatorsContext, fuelContext].filter(Boolean).join('\n\n');
   const systemInstruction = buildSystemInstructions(matchedCategory, combinedExtraContext);
 
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
-  const currencyPrefix = buildCurrencyPromptPrefix(liveRates);
+  const currencyPrefix = (!isGreeting && isCurrencyRelevant) ? buildCurrencyPromptPrefix(liveRates) : '';
   const formattedContents = messages.map((m, idx) => {
     if (idx === lastUserIndex && currencyPrefix) {
       return {
@@ -419,6 +463,7 @@ export async function* streamEconomistResponse(
 
   // 1ª Tentativa: Com Google Search Grounding em streaming em tempo real (fail-fast ágil de 6.5s)
   let lastError: any = null;
+  const configTools = isGreeting ? undefined : [{ googleSearch: {} }];
   for (const modelName of modelsToTry.slice(0, 2)) {
     const controller = new AbortController();
     const connectTimer = setTimeout(() => controller.abort(), 6500);
@@ -428,8 +473,8 @@ export async function* streamEconomistResponse(
         contents: formattedContents,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.35,
-          tools: [{ googleSearch: {} }],
+          temperature: isGreeting ? 0.6 : 0.35,
+          ...(configTools ? { tools: configTools } : {}),
           abortSignal: controller.signal,
         },
       });
@@ -462,10 +507,13 @@ export async function* streamEconomistResponse(
       clearTimeout(connectTimer);
 
       if (fullText.trim()) {
-        const relevantSources = filterRelevantSources(finalSources, fullText, lastUserMsg);
+        const relevantSources = isGreeting
+          ? []
+          : filterRelevantSources(finalSources, fullText, lastUserMsg);
 
         let suggestedAction: any = undefined;
         const isAnalyticalResponse =
+          !isGreeting &&
           fullText.length > 300 &&
           (matchedCategory !== null ||
             /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
@@ -506,7 +554,7 @@ export async function* streamEconomistResponse(
         contents: formattedContents,
         config: {
           systemInstruction: systemInstruction,
-          temperature: 0.35,
+          temperature: isGreeting ? 0.6 : 0.35,
           abortSignal: controller.signal,
         },
       });
@@ -523,10 +571,13 @@ export async function* streamEconomistResponse(
       clearTimeout(connectTimer);
 
       if (fullText.trim()) {
-        const relevantSources = filterRelevantSources(additionalSources, fullText, lastUserMsg);
+        const relevantSources = isGreeting
+          ? []
+          : filterRelevantSources(additionalSources, fullText, lastUserMsg);
 
         let suggestedAction: any = undefined;
         const isAnalyticalResponse =
+          !isGreeting &&
           fullText.length > 300 &&
           (matchedCategory !== null ||
             /reajuste|cost driver|should-cost|projeção|cenário|mercado|análise|inflação|câmbio|dólar|dolar/i.test(lastUserMsg));
